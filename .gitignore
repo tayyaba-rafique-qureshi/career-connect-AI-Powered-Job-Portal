@@ -1,0 +1,41 @@
+# ─── Environment files (NEVER commit these) ───────────────────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+server/.env
+client/.env
+
+# ─── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+client/node_modules/
+server/node_modules/
+ai-service/__pycache__/
+ai-service/*.pyc
+ai-service/venv/
+ai-service/.venv/
+
+# ─── Build outputs ─────────────────────────────────────────────────────────────
+client/dist/
+client/.vite/
+
+# ─── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# ─── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── IDE files ─────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# ─── Uploads / temp ────────────────────────────────────────────────────────────
+uploads/
+tmp/
