@@ -1,5 +1,7 @@
 # CareerConnect — AI-Powered Job Portal
 
+> ⚠️ **This project is currently in active development.** Features are being added and improved regularly. Not all functionality is complete.
+
 A full-stack job portal that uses AI to match applicants with jobs based on skills, experience, and preferences — not just keywords.
 
 ## Tech Stack
@@ -42,7 +44,13 @@ careerconnect/
 - Python 3.10+
 - MongoDB Atlas account
 
-### Backend
+### 1. Clone the repo
+```bash
+git clone https://github.com/tayyaba-rafique-qureshi/career-connect-AI-Powered-Job-Portal.git
+cd career-connect-AI-Powered-Job-Portal
+```
+
+### 2. Backend setup
 ```bash
 cd server
 cp .env.example .env   # fill in your values
@@ -50,14 +58,14 @@ npm install
 npm run dev
 ```
 
-### AI Service
+### 3. AI Service setup
 ```bash
 cd ai-service
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-### Frontend
+### 4. Frontend setup
 ```bash
 cd client
 cp .env.example .env
@@ -67,16 +75,33 @@ npm run dev
 
 ## Environment Variables
 
-See `server/.env.example` and `client/.env.example` for required variables.
+Copy `.env.example` to `.env` in both `server/` and `client/` and fill in:
+
+| Variable | Description |
+|---|---|
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `JWT_SECRET` | Any strong random string |
+| `GOOGLE_CLIENT_ID` | From Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
+| `GMAIL_USER` | Your Gmail address |
+| `GMAIL_APP_PASSWORD` | 16-char Gmail App Password |
+| `CLIENT_URL` | Frontend URL (e.g. http://localhost:3001) |
 
 ## Team
 
-| Name | Role |
+| Name 
 |---|---|
-| [Your Name] | Full Stack + AI Integration |
-| [Teammate 1] | Backend + Database |
-| [Teammate 2] | Frontend + UI/UX |
+| Tayyaba Rafique 
+| Samreen Farhat 
+| Umama Hidayat
 
-## License
+## Status
 
-MIT
+- [x] Authentication (JWT + Google OAuth)
+- [x] Onboarding flow
+- [x] Landing page
+- [x] Email notifications
+- [ ] Job posting (in progress)
+- [ ] AI matching integration (in progress)
+- [ ] Resume upload via Cloudflare R2 (planned)
+- [ ] Deployment (planned)
