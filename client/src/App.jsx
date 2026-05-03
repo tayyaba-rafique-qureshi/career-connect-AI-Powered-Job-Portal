@@ -10,8 +10,13 @@ import JobList from './pages/JobList'
 import AuthCallback from './pages/AuthCallback'
 import ApplicantOnboarding from './pages/onboarding/ApplicantOnboarding'
 import EmployerOnboarding from './pages/onboarding/EmployerOnboarding'
+import PostJob from './pages/employer/PostJob'
+import MyJobs from './pages/employer/MyJobs'
+import JobApplicants from './pages/employer/JobApplicants'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRedirect from './components/RoleRedirect'
+
+const EMPLOYER_ROLES = ['recruiter', 'employer']
 
 function GuestRoute({ children }) {
   const { user, loading } = useAuth()
@@ -33,8 +38,29 @@ export default function App() {
           </ProtectedRoute>
         } />
         <Route path="/dashboard/recruiter" element={
-          <ProtectedRoute allowedRoles={['recruiter', 'employer']}>
+          <ProtectedRoute allowedRoles={EMPLOYER_ROLES}>
             <RecruiterDashboard />
+          </ProtectedRoute>
+        } />
+        {/* Recruiter sub-pages */}
+        <Route path="/dashboard/recruiter/post-job" element={
+          <ProtectedRoute allowedRoles={EMPLOYER_ROLES}>
+            <PostJob />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/recruiter/jobs/:jobId/edit" element={
+          <ProtectedRoute allowedRoles={EMPLOYER_ROLES}>
+            <PostJob />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/recruiter/jobs" element={
+          <ProtectedRoute allowedRoles={EMPLOYER_ROLES}>
+            <MyJobs />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/recruiter/jobs/:jobId/applicants" element={
+          <ProtectedRoute allowedRoles={EMPLOYER_ROLES}>
+            <JobApplicants />
           </ProtectedRoute>
         } />
         <Route path="/dashboard/admin" element={

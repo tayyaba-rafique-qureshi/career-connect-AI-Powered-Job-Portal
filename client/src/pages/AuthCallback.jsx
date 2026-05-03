@@ -21,10 +21,20 @@ export default function AuthCallback() {
       setUserFromOAuth(token, parsed)
 
       // Send to onboarding if profile not complete, else role dashboard
-      if (!parsed.isProfileComplete) {
-        navigate('/onboarding')
+      const home = {
+        admin:     '/dashboard/admin',
+        recruiter: '/dashboard/recruiter',
+        employer:  '/dashboard/recruiter',
+        applicant: '/dashboard/applicant',
+      }
+      if (!parsed.onboardingComplete && !parsed.isProfileComplete && parsed.role !== 'admin') {
+        const onboardingRoute = {
+          applicant: '/onboarding/applicant',
+          recruiter: '/onboarding/applicant',
+          employer:  '/onboarding/employer',
+        }
+        navigate(onboardingRoute[parsed.role] ?? '/onboarding/applicant')
       } else {
-        const home = { admin: '/dashboard/admin', recruiter: '/dashboard/recruiter', applicant: '/dashboard/applicant' }
         navigate(home[parsed.role] ?? '/dashboard/applicant')
       }
     } catch {
