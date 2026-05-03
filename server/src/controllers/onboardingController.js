@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const axios = require('axios')
 const User = require('../models/User')
 const { getBucket } = require('../config/gridfs')
+const compressPdf = require('../utils/compressPdf')
 const { sendOnboardingCompleteEmail } = require('../services/emailService')
 
 // ─── Helper: upload buffer to GridFS ─────────────────────────────────────────
@@ -78,18 +79,24 @@ exports.saveStep = async (req, res) => {
           // Delete old resume from GridFS if exists
           if (p.resume?.fileId) await deleteOldResume(p.resume.fileId)
 
-          // Upload buffer to GridFS
+          // Compress PDF before storing (lossless, falls back to original if no gain)
+          const { buffer, originalSize, compressedSize, compressed } = await compressPdf(req.file.buffer)
+
+          // Upload (possibly compressed) buffer to GridFS
           const filename = `resume_${req.user.id}_${Date.now()}.pdf`
-          const fileId = await uploadToGridFS(req.file.buffer, filename)
+          const fileId = await uploadToGridFS(buffer, filename)
 
           // Extract text via Python AI service
           const rawText = await extractResumeText(fileId)
 
           p.resume = {
             fileId,
-            fileName:   filename,
-            uploadedAt: new Date(),
-            rawText
+            fileName:       filename,
+            uploadedAt:     new Date(),
+            rawText,
+            originalSize,   // stored for transparency / debugging
+            storedSize:     compressedSize,
+            wasCompressed:  compressed
           }
         }
 
