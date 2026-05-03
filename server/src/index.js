@@ -1,11 +1,19 @@
 const dotenv = require('dotenv')
-dotenv.config()                        // must be first — before any module reads process.env
+dotenv.config()
 
 const express = require('express')
 const cors = require('cors')
+const mongoose = require('mongoose')
 const passport = require('./config/passport')
 const connectDB = require('./config/db')
+const { initGridFS } = require('./config/gridfs')
+
 connectDB()
+
+// Initialize GridFS after mongoose connects
+mongoose.connection.once('open', () => {
+  initGridFS()
+})
 
 const app = express()
 app.use(cors({

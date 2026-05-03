@@ -90,7 +90,7 @@ Copy `.env.example` to `.env` in both `server/` and `client/` and fill in:
 ## Team
 
 | Name 
-|---|---|
+|---|
 | Tayyaba Rafique 
 | Samreen Farhat 
 | Umama Hidayat

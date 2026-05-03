@@ -25,7 +25,10 @@ const applicantProfileSchema = new mongoose.Schema({
     careerGoals:        String
   },
   resume: {
-    fileUrl: String, rawText: String, lastUpdated: Date
+    fileId:     { type: mongoose.Schema.Types.ObjectId },  // GridFS file reference
+    fileName:   String,
+    uploadedAt: Date,
+    rawText:    String   // extracted by Python AI service
   },
   profileSummary: String,
   linkedinUrl:    String,

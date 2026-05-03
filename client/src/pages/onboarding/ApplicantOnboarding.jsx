@@ -102,10 +102,23 @@ export default function ApplicantOnboarding() {
   const [prefs, setPrefs] = useState({ jobType: [], workMode: '', salaryMin: 0, salaryMax: 100000, preferredLocations: [], openToRelocation: false, careerGoals: '' })
   const [resume, setResume] = useState({ file: null, profileSummary: '', linkedinUrl: '', portfolioUrl: '' })
 
+  const [uploading, setUploading] = useState(false)
+
   const showSaved = () => { setSaved(true); setTimeout(() => setSaved(false), 2000) }
 
   const saveStep = async (stepNum, data) => {
     await api.patch('/users/onboarding', { step: stepNum, role: user?.role || 'applicant', data })
+    showSaved()
+  }
+
+  const saveStepWithFile = async (stepNum, data, file) => {
+    const formData = new FormData()
+    formData.append('step', stepNum)
+    formData.append('role', user?.role || 'applicant')
+    formData.append('data', JSON.stringify(data))
+    if (file) formData.append('resume', file)
+    // Do NOT set Content-Type — browser sets it with boundary automatically
+    await api.patch('/users/onboarding', formData)
     showSaved()
   }
 
@@ -149,9 +162,18 @@ export default function ApplicantOnboarding() {
       if (step === 3) await saveStep(3, { skills, tools, certifications: certs })
       if (step === 4) await saveStep(4, prefs)
       if (step === 5) {
-        await saveStep(5, { resume: { rawText: resume.profileSummary }, profileSummary: resume.profileSummary, linkedinUrl: resume.linkedinUrl, portfolioUrl: resume.portfolioUrl })
-        markProfileComplete()
-        navigate('/dashboard/applicant')
+        setUploading(true)
+        try {
+          await saveStepWithFile(5, {
+            profileSummary: resume.profileSummary,
+            linkedinUrl:    resume.linkedinUrl,
+            portfolioUrl:   resume.portfolioUrl
+          }, resume.file)
+          markProfileComplete()
+          navigate('/dashboard/applicant')
+        } finally {
+          setUploading(false)
+        }
         return
       }
       setStep(s => s + 1)
@@ -170,7 +192,8 @@ export default function ApplicantOnboarding() {
       subtitle={['Let\'s start with the basics.', 'Help employers understand your experience.', 'Skills are key to AI job matching.', 'What kind of work are you looking for?', 'Upload your resume to complete your profile.'][step - 1]}
       onBack={() => setStep(s => s - 1)}
       onContinue={handleContinue}
-      continueLabel={step === TOTAL ? 'Complete Profile' : 'Continue'}
+      continueLabel={step === TOTAL ? (uploading ? 'Uploading & processing...' : 'Complete Profile') : 'Continue'}
+      continueDisabled={uploading}
     >
       {saved && <div className="mb-4 text-xs text-green-600 font-medium">✓ Saved</div>}
 
