@@ -17,8 +17,26 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(form.email, form.password)
-      navigate('/')
+      const data = await login(form.email, form.password)
+      // Navigate directly to the role's dashboard so we don't race against
+      // the async state update that RoleRedirect depends on.
+      const roleHome = {
+        admin:     '/dashboard/admin',
+        recruiter: '/dashboard/recruiter',
+        employer:  '/dashboard/recruiter',
+        applicant: '/dashboard/applicant',
+      }
+      // If onboarding isn't done yet, send to the right onboarding flow
+      if (!data.user.onboardingComplete) {
+        const onboardingRoute = {
+          applicant: '/onboarding/applicant',
+          recruiter: '/onboarding/applicant',
+          employer:  '/onboarding/employer',
+        }
+        navigate(onboardingRoute[data.user.role] ?? '/onboarding/applicant')
+      } else {
+        navigate(roleHome[data.user.role] ?? '/dashboard/applicant')
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')
     } finally {
