@@ -12,7 +12,9 @@ node_modules/
 client/node_modules/
 server/node_modules/
 ai-service/__pycache__/
+ai-service/**/__pycache__/
 ai-service/*.pyc
+ai-service/**/*.pyc
 ai-service/venv/
 ai-service/.venv/
 
