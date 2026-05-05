@@ -159,6 +159,9 @@ exports.getJobApplicants = async (req, res) => {
     const jobSkills = job.requiredSkills || job.skills || []
 
     const enriched = applications.map((app) => {
+      // TODO: Replace with real AI service call
+      // Call POST /api/ai/match with { applicant_id, job_id } to get a live score
+      // from the Python AI service instead of this deterministic mock.
       // Deterministic mock score seeded by applicant ID until AI service is connected
       const idSum = app.applicant._id.toString()
         .split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
