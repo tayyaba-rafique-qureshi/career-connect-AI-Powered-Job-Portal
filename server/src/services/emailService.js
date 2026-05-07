@@ -147,3 +147,15 @@ exports.sendNewApplicationEmail = ({ employer, applicant, job }) => sendMail({
     <a href="${process.env.CLIENT_URL}/dashboard/recruiter" class="btn">Review Application</a>
   `)
 })
+
+// ─── Generic email sender for admin announcements ─────────────────────────────
+exports.sendEmail = async (to, subject, message) => {
+  return sendMail({
+    to,
+    subject,
+    html: base(`
+      <h2>${subject}</h2>
+      <p style="white-space: pre-wrap;">${message}</p>
+    `)
+  })
+}

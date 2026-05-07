@@ -1,50 +1,28 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import api from '../services/api'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
+import AdminOverview from './admin/AdminOverview'
+import AdminUsers from './admin/AdminUsers'
+import AdminJobs from './admin/AdminJobs'
+import AdminApplications from './admin/AdminApplications'
+import AdminAnalytics from './admin/AdminAnalytics'
+import AdminSettings from './admin/AdminSettings'
+import AdminAnnouncements from './admin/AdminAnnouncements'
+import AdminAuditLogs from './admin/AdminAuditLogs'
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [stats, setStats] = useState({ users: 0, jobs: 0, applications: 0 })
-
-  useEffect(() => {
-    Promise.all([
-      api.get('/admin/users'),
-      api.get('/admin/jobs'),
-      api.get('/admin/applications')
-    ]).then(([u, j, a]) => {
-      setStats({ users: u.data.length, jobs: j.data.length, applications: a.data.length })
-    }).catch(() => {})
-  }, [])
-
-  const handleLogout = () => { logout(); navigate('/login') }
-
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <button className="btn-outline" onClick={handleLogout}>Logout</button>
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h3>{stats.users}</h3>
-          <p>Total Users</p>
-        </div>
-        <div className="stat-card">
-          <h3>{stats.jobs}</h3>
-          <p>Total Jobs</p>
-        </div>
-        <div className="stat-card">
-          <h3>{stats.applications}</h3>
-          <p>Applications</p>
-        </div>
-      </div>
-
-      <div className="dashboard-card" style={{ marginTop: '1.5rem' }}>
-        <p>Logged in as <strong>{user?.name}</strong> — <span className="role-badge admin">Admin</span></p>
-      </div>
-    </div>
+    <AdminLayout>
+      <Routes>
+        <Route index element={<AdminOverview />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="jobs" element={<AdminJobs />} />
+        <Route path="applications" element={<AdminApplications />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="announcements" element={<AdminAnnouncements />} />
+        <Route path="audit-logs" element={<AdminAuditLogs />} />
+        <Route path="*" element={<Navigate to="/dashboard/admin" replace />} />
+      </Routes>
+    </AdminLayout>
   )
 }
