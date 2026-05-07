@@ -17,7 +17,7 @@ mongoose.connection.once('open', () => {
 
 const app = express()
 app.use(cors({
-  origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:3001'],
+  origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173'],
   credentials: true
 }))
 app.use(express.json())
@@ -30,5 +30,5 @@ app.use('/api/applications', require('./routes/applicationRoutes'))
 app.use('/api/admin', require('./routes/adminRoutes'))
 app.use('/api/users', require('./routes/onboardingRoutes'))
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5001
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

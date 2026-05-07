@@ -63,7 +63,7 @@ export default function App() {
             <JobApplicants />
           </ProtectedRoute>
         } />
-        <Route path="/dashboard/admin" element={
+        <Route path="/dashboard/admin/*" element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
           </ProtectedRoute>
