@@ -68,7 +68,26 @@ const userSchema = new mongoose.Schema({
   onboardingComplete: { type: Boolean, default: false },
   onboardingStep:     { type: Number, default: 0 },
   applicantProfile:   applicantProfileSchema,
-  employerProfile:    employerProfileSchema
+  employerProfile:    employerProfileSchema,
+  // Admin fields
+  isBanned:    { type: Boolean, default: false },
+  banReason:   { type: String },
+  bannedAt:    { type: Date },
+  bannedBy:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  lastLoginAt: { type: Date },
+  loginCount:  { type: Number, default: 0 },
+  // Employer verification
+  isVerifiedEmployer: { type: Boolean, default: false },
+  verificationStatus: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
+  verificationRequest: {
+    submittedAt:    { type: Date },
+    companyWebsite: { type: String },
+    companyRegNo:   { type: String },
+    documents:      [{ type: String }],
+    rejectedReason: { type: String },
+    reviewedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reviewedAt:     { type: Date }
+  }
 }, { timestamps: true })
 
 userSchema.pre('save', async function (next) {
