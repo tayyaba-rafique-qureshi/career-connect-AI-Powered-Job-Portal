@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { X, Calendar, Clock, Video, MapPin, FileText, Loader2 } from 'lucide-react'
 import api from '../../services/api'
 
-export default function ScheduleInterviewModal({ application, employerAddress, onClose, onSuccess }) {
+export default function ScheduleInterviewModal({ application, employerAddress, onClose, onSuccess, isReschedule = false }) {
+  const existing = application?.interview || {}
   const [form, setForm] = useState({
-    date:        '',
-    time:        '',
-    type:        'virtual',
-    meetingLink: '',
-    address:     employerAddress || '',
-    notes:       '',
+    date:        existing.date || '',
+    time:        existing.time || '',
+    type:        existing.type || 'virtual',
+    meetingLink: existing.meetingLink || '',
+    address:     existing.address || employerAddress || '',
+    notes:       existing.notes || '',
   })
   const [errors, setErrors]   = useState({})
   const [loading, setLoading] = useState(false)
@@ -42,8 +43,10 @@ export default function ScheduleInterviewModal({ application, employerAddress, o
     setLoading(true)
     setApiError('')
     try {
-      await api.post(`/applications/${application._id}/interview`, form)
-      onSuccess(application._id)
+      const { data } = isReschedule
+        ? await api.patch(`/applications/${application._id}/reschedule`, form)
+        : await api.post(`/applications/${application._id}/interview`, form)
+      onSuccess(data)
     } catch (err) {
       setApiError(err.response?.data?.message || 'Failed to schedule interview. Please try again.')
     } finally {
@@ -62,7 +65,7 @@ export default function ScheduleInterviewModal({ application, employerAddress, o
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-base font-semibold text-[#1A1A2E]">Schedule Interview</h2>
+            <h2 className="text-base font-semibold text-[#1A1A2E]">{isReschedule ? 'Reschedule Interview' : 'Schedule Interview'}</h2>
             <p className="text-xs text-[#595959] mt-0.5">
               {application.applicant?.name} — {application.job?.title}
             </p>
@@ -185,7 +188,7 @@ export default function ScheduleInterviewModal({ application, employerAddress, o
             className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-[#2557A7] hover:bg-[#1a4480] disabled:opacity-50 text-white rounded-lg transition-colors"
           >
             {loading && <Loader2 size={14} className="animate-spin" />}
-            Send Invitation
+            {isReschedule ? 'Save Reschedule' : 'Send Invitation'}
           </button>
         </div>
       </div>
