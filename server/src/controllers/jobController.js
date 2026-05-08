@@ -1,6 +1,9 @@
 const Job = require('../models/Job')
 const Application = require('../models/Application')
 const User = require('../models/User')
+const Notification = require('../models/Notification')
+const Report = require('../models/Report')
+const { sendJobMatchEmail } = require('../services/emailService')
 
 // ─── Public ───────────────────────────────────────────────────────────────────
 
@@ -10,6 +13,36 @@ exports.getAllJobs = async (req, res) => {
     const jobs = await Job.find({ status: 'active' }).populate('postedBy', 'name email employerProfile')
     res.json(jobs)
   } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// GET /api/jobs/search?title=&location= — regex search (public)
+exports.searchJobs = async (req, res) => {
+  try {
+    const { title, location } = req.query
+    const filter = { status: 'active' }
+
+    if (title && title.trim()) {
+      const regex = new RegExp(title.trim(), 'i')
+      filter.$or = [
+        { title: regex },
+        { description: regex },
+        { company: regex }
+      ]
+    }
+
+    if (location && location.trim()) {
+      filter.location = { $regex: location.trim(), $options: 'i' }
+    }
+
+    const jobs = await Job.find(filter)
+      .populate('postedBy', 'name email employerProfile')
+      .sort({ createdAt: -1 })
+
+    res.json(jobs)
+  } catch (err) {
+    console.error('[searchJobs]', err.message)
     res.status(500).json({ message: err.message })
   }
 }
@@ -29,6 +62,28 @@ exports.getJobById = async (req, res) => {
   }
 }
 
+// POST /api/jobs/:id/report — report a job (public/applicant)
+exports.reportJob = async (req, res) => {
+  try {
+    const { reason, description } = req.body
+    if (!reason) return res.status(400).json({ message: 'Reason is required' })
+
+    const job = await Job.findById(req.params.id)
+    if (!job) return res.status(404).json({ message: 'Job not found' })
+
+    const report = await Report.create({
+      job: job._id,
+      reportedBy: req.user.id,
+      reason,
+      description: description || ''
+    })
+
+    res.status(201).json({ message: 'Job reported successfully', reportId: report._id })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
 // ─── Employer ─────────────────────────────────────────────────────────────────
 
 // POST /api/jobs — create job (employer only)
@@ -39,8 +94,9 @@ exports.createJob = async (req, res) => {
 
     // Explicitly pick allowed fields so status can't be bypassed
     const {
+      company,
       title, description, location, requiredSkills, skills,
-      experienceLevel, jobType, workMode, salaryMin, salaryMax, status
+      experienceLevel, jobType, workMode, salaryMin, salaryMax, salaryType, status
     } = req.body
 
     const validStatuses = ['active', 'draft', 'closed']
@@ -51,12 +107,19 @@ exports.createJob = async (req, res) => {
     const job = await Job.create({
       title, description, location, requiredSkills, skills,
       experienceLevel, jobType, workMode, salaryMin, salaryMax,
+      salaryType: salaryType || 'yearly',
       status: resolvedStatus,
-      company: companyName,
+      company: (company && String(company).trim()) || companyName,
       postedBy: req.user.id
     })
 
     console.log(`[createJob] saved _id=${job._id} status="${job.status}"`)
+
+    // Fire-and-forget: notify matching applicants if job is published
+    if (resolvedStatus === 'active') {
+      emailMatchingApplicants(job).catch(err => console.error('[emailMatchingApplicants]', err.message))
+    }
+
     res.status(201).json(job)
   } catch (err) {
     res.status(500).json({ message: err.message })
@@ -88,11 +151,13 @@ exports.updateJob = async (req, res) => {
     if (!job) return res.status(404).json({ message: 'Job not found or not authorized' })
 
     const {
+      company,
       title, description, location, requiredSkills, skills,
-      experienceLevel, jobType, workMode, salaryMin, salaryMax, status
+      experienceLevel, jobType, workMode, salaryMin, salaryMax, salaryType, status
     } = req.body
 
     const validStatuses = ['active', 'draft', 'closed']
+    if (company !== undefined)         job.company         = company
     if (title !== undefined)           job.title           = title
     if (description !== undefined)     job.description     = description
     if (location !== undefined)        job.location        = location
@@ -103,6 +168,7 @@ exports.updateJob = async (req, res) => {
     if (workMode !== undefined)        job.workMode        = workMode
     if (salaryMin !== undefined)       job.salaryMin       = salaryMin
     if (salaryMax !== undefined)       job.salaryMax       = salaryMax
+    if (salaryType !== undefined)      job.salaryType      = salaryType
     if (status !== undefined && validStatuses.includes(status)) job.status = status
 
     console.log(`[updateJob] _id=${job._id} status="${job.status}"`)
@@ -156,9 +222,22 @@ exports.getJobApplicants = async (req, res) => {
       .populate('applicant', 'name email avatar applicantProfile')
       .sort({ createdAt: -1 })
 
+    // Auto-mark past interviews as completed for recruiter views.
+    for (const app of applications) {
+      if (app.interview?.scheduledAt && app.interview?.status !== 'completed') {
+        if (new Date(app.interview.scheduledAt) < new Date()) {
+          app.interview.status = 'completed'
+          await app.save()
+        }
+      }
+    }
+
     const jobSkills = job.requiredSkills || job.skills || []
 
     const enriched = applications.map((app) => {
+      // TODO: Replace with real AI service call
+      // Call POST /api/ai/match with { applicant_id, job_id } to get a live score
+      // from the Python AI service instead of this deterministic mock.
       // Deterministic mock score seeded by applicant ID until AI service is connected
       const idSum = app.applicant._id.toString()
         .split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -208,5 +287,155 @@ exports.getEmployerStats = async (req, res) => {
     res.json({ activeJobs, totalApplications, interviews, totalViews })
   } catch (err) {
     res.status(500).json({ message: err.message })
+  }
+}
+
+// ─── Applicant ────────────────────────────────────────────────────────────────
+
+// GET /api/jobs/recommended — personalized job recommendations
+exports.getRecommendedJobs = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+    if (!user || !user.applicantProfile) {
+      return res.json([])
+    }
+
+    const prefs = user.applicantProfile.preferences || {}
+    const userSkills = (user.applicantProfile.skills || [])
+      .map(s => (typeof s === 'string' ? s : s.name || '').toLowerCase())
+
+    const filter = { status: 'active' }
+    const conditions = []
+
+    // Location match
+    if (prefs.preferredLocations?.length > 0) {
+      const locRegexes = prefs.preferredLocations.map(l => new RegExp(l, 'i'))
+      conditions.push({ location: { $in: locRegexes } })
+    }
+
+    // Job type match
+    if (prefs.jobType?.length > 0) {
+      conditions.push({ jobType: { $in: prefs.jobType } })
+    }
+
+    // Work mode match
+    if (prefs.workMode) {
+      conditions.push({ workMode: prefs.workMode })
+    }
+
+    // Skills match — at least 1 skill overlaps
+    if (userSkills.length > 0) {
+      const skillRegexes = userSkills.map(s => new RegExp(`^${s}$`, 'i'))
+      conditions.push({ requiredSkills: { $in: skillRegexes } })
+    }
+
+    if (conditions.length > 0) {
+      // Use $or to be inclusive — match ANY preference criteria
+      filter.$or = conditions
+    }
+
+    const jobs = await Job.find(filter)
+      .populate('postedBy', 'name email employerProfile')
+      .sort({ createdAt: -1 })
+      .limit(10)
+
+    res.json(jobs)
+  } catch (err) {
+    console.error('[getRecommendedJobs]', err.message)
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// GET /api/jobs/:id/applicants/export — export applicants as Excel
+exports.exportApplicants = async (req, res) => {
+  try {
+    const job = await Job.findOne({ _id: req.params.id, postedBy: req.user.id })
+    if (!job) return res.status(404).json({ message: 'Job not found or not authorized' })
+
+    const applications = await Application.find({ job: req.params.id })
+      .populate('applicant', 'name email applicantProfile')
+      .sort({ createdAt: -1 })
+
+    const jobSkills = job.requiredSkills || job.skills || []
+
+    // Build CSV as fallback (no exceljs dependency needed)
+    const headers = ['Name', 'Email', 'Phone', 'Current Title', 'Experience', 'Skills', 'Skills Matched', 'Applied Date', 'Status']
+    const rows = applications.map(app => {
+      const profile = app.applicant?.applicantProfile || {}
+      const pro = profile.professionalInfo || {}
+      const basic = profile.basicInfo || {}
+      const applicantSkills = (profile.skills || []).map(s => typeof s === 'string' ? s : s.name || '')
+      const matched = jobSkills.filter(s => applicantSkills.map(x => x.toLowerCase()).includes(s.toLowerCase()))
+
+      return [
+        app.applicant?.name || '',
+        app.applicant?.email || '',
+        basic.phone || '',
+        pro.currentTitle || '',
+        pro.yearsOfExp || '',
+        applicantSkills.join('; '),
+        `${matched.length}/${jobSkills.length}`,
+        new Date(app.createdAt).toLocaleDateString(),
+        app.status || 'pending'
+      ]
+    })
+
+    // Generate CSV
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+
+    const filename = `${job.title.replace(/[^a-zA-Z0-9]/g, '_')}_applicants.csv`
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.send(csvContent)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// ─── Helper: Email matching applicants ────────────────────────────────────────
+async function emailMatchingApplicants(job) {
+  try {
+    const filter = {
+      role: 'applicant',
+      onboardingComplete: true
+    }
+
+    const applicants = await User.find(filter)
+
+    let matchCount = 0
+    for (const applicant of applicants) {
+      const prefs = applicant.applicantProfile?.preferences || {}
+
+      // Check location match
+      const locMatch = !prefs.preferredLocations?.length ||
+        prefs.preferredLocations.some(l => job.location?.toLowerCase().includes(l.toLowerCase()))
+
+      // Check job type match
+      const typeMatch = !prefs.jobType?.length ||
+        prefs.jobType.some(t => job.jobType?.includes(t))
+
+      // Check work mode match
+      const modeMatch = !prefs.workMode || prefs.workMode === job.workMode
+
+      if (locMatch && typeMatch && modeMatch) {
+        matchCount++
+        // Create notification
+        await Notification.create({
+          user: applicant._id,
+          type: 'job_match',
+          title: `New ${job.title} job in ${job.location || 'your area'}`,
+          message: `${job.company} is hiring a ${job.title}. Check it out!`,
+          link: `/dashboard/applicant`
+        })
+
+        // Send email (fire-and-forget)
+        sendJobMatchEmail({ applicant, job }).catch(() => {})
+      }
+    }
+    console.log(`[emailMatchingApplicants] Notified ${matchCount} applicants for "${job.title}"`)
+  } catch (err) {
+    console.error('[emailMatchingApplicants]', err.message)
   }
 }

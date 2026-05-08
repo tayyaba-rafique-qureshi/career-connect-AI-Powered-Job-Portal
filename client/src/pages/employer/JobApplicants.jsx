@@ -8,7 +8,7 @@ import Toast from '../../components/employer/Toast'
 import api from '../../services/api'
 import {
   ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown,
-  Calendar, UserCheck, UserX, User, Loader2, Users
+  Calendar, UserCheck, UserX, User, Loader2, Users, Download, MessageSquare, FileDown
 } from 'lucide-react'
 
 const STATUS_STYLES = {
@@ -80,18 +80,34 @@ export default function JobApplicants() {
     }
   }
 
-  const handleInterviewSuccess = (appId) => {
+  const handleInterviewSuccess = (updatedApplication) => {
     setInterviewModal(null)
     setApplicants(apps => apps.map(a =>
-      a._id === appId ? { ...a, status: 'shortlisted', interview: { scheduledAt: new Date() } } : a
+      a._id === updatedApplication?._id ? { ...a, ...updatedApplication } : a
     ))
-    setToast({ message: 'Interview invitation sent!', type: 'success' })
+    setToast({ message: 'Interview schedule updated!', type: 'success' })
   }
 
   const initials = (name) =>
     (name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
   const SortIcon = sortDir === 'desc' ? ArrowDown : ArrowUp
+
+  const getInterviewState = (app) => {
+    const iv = app?.interview
+    if (!iv?.scheduledAt) return { canReschedule: true, isCompleted: false, tooClose: false, tooltip: '' }
+    const scheduledAt = new Date(iv.scheduledAt)
+    const now = new Date()
+    if (Number.isNaN(scheduledAt.getTime())) return { canReschedule: true, isCompleted: false, tooClose: false, tooltip: '' }
+    if (scheduledAt < now || iv.status === 'completed') {
+      return { canReschedule: false, isCompleted: true, tooClose: false, tooltip: 'Interview already completed' }
+    }
+    const twoHoursBefore = new Date(scheduledAt.getTime() - 2 * 60 * 60 * 1000)
+    if (now > twoHoursBefore) {
+      return { canReschedule: false, isCompleted: false, tooClose: true, tooltip: 'Too close to interview time (under 2 hours)' }
+    }
+    return { canReschedule: true, isCompleted: false, tooClose: false, tooltip: '' }
+  }
 
   return (
     <EmployerLayout>
@@ -103,6 +119,7 @@ export default function JobApplicants() {
           employerAddress={employerAddress}
           onClose={() => setInterviewModal(null)}
           onSuccess={handleInterviewSuccess}
+          isReschedule={!!interviewModal?.interview}
         />
       )}
 
@@ -164,22 +181,46 @@ export default function JobApplicants() {
         </div>
       ) : (
         <>
-          {/* Sort control */}
+          {/* Sort + Export controls */}
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-[#595959]">Sorted by AI match score</p>
-            <button
-              onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-              className="flex items-center gap-1.5 text-xs font-medium text-[#2557A7] hover:underline"
-            >
-              <SortIcon size={13} />
-              {sortDir === 'desc' ? 'Highest first' : 'Lowest first'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  const token = localStorage.getItem('token')
+                  const url = `${api.defaults.baseURL}/jobs/${jobId}/applicants/export`
+                  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                    .then(res => res.blob())
+                    .then(blob => {
+                      const a = document.createElement('a')
+                      a.href = URL.createObjectURL(blob)
+                      a.download = `applicants_${jobId}.csv`
+                      a.click()
+                      URL.revokeObjectURL(a.href)
+                      setToast({ message: 'Export downloaded!', type: 'success' })
+                    })
+                    .catch(() => setToast({ message: 'Export failed.', type: 'error' }))
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#2557A7] hover:underline"
+              >
+                <Download size={13} />
+                Export CSV
+              </button>
+              <button
+                onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#2557A7] hover:underline"
+              >
+                <SortIcon size={13} />
+                {sortDir === 'desc' ? 'Highest first' : 'Lowest first'}
+              </button>
+            </div>
           </div>
 
           {/* Applicant cards */}
           <div className="space-y-3">
             {sorted.map(app => {
               const busy = actionLoading[app._id]
+              const ivState = getInterviewState(app)
               const name = app.applicant?.name || 'Unknown'
               const profile = app.applicant?.applicantProfile || {}
               const pro = profile.professionalInfo || {}
@@ -244,6 +285,30 @@ export default function JobApplicants() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
                       <button
+                        onClick={() => {
+                          const token = localStorage.getItem('token')
+                          const url = `${api.defaults.baseURL}/applications/${app._id}/resume`
+                          fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                            .then(async (res) => {
+                              if (!res.ok) throw new Error((await res.json().catch(() => null))?.message || 'Download failed')
+                              return res.blob()
+                            })
+                            .then(blob => {
+                              const a = document.createElement('a')
+                              a.href = URL.createObjectURL(blob)
+                              a.download = `resume_${(name || 'applicant').replace(/\\s+/g, '_')}.pdf`
+                              a.click()
+                              URL.revokeObjectURL(a.href)
+                            })
+                            .catch((e) => setToast({ message: e.message || 'Resume download failed.', type: 'error' }))
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#1A1A2E] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        title="Download applicant CV"
+                      >
+                        <FileDown size={13} />
+                        CV
+                      </button>
+                      <button
                         onClick={() => setProfileModal(app)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#595959] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                       >
@@ -251,12 +316,26 @@ export default function JobApplicants() {
                         Profile
                       </button>
                       <button
+                        onClick={() => {
+                          const jobIdStr = String(jobId)
+                          const applicantId = app.applicant?._id
+                          const employerId = user?.id || user?._id
+                          if (!applicantId || !employerId) return
+                          navigate(`/messages?jobId=${jobIdStr}&applicantId=${applicantId}&employerId=${employerId}`)
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#2557A7] border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        <MessageSquare size={13} />
+                        Message
+                      </button>
+                      <button
                         onClick={() => setInterviewModal(app)}
-                        disabled={!!busy || app.status === 'rejected'}
+                        disabled={!!busy || app.status === 'rejected' || (app.interview && !ivState.canReschedule)}
+                        title={app.interview && !ivState.canReschedule ? ivState.tooltip : ''}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#2557A7] border border-[#2557A7] rounded-lg hover:bg-blue-50 disabled:opacity-40 transition-colors"
                       >
                         <Calendar size={13} />
-                        Schedule
+                        {app.interview ? 'Reschedule' : 'Schedule'}
                       </button>
                       <button
                         onClick={() => updateStatus(app._id, 'shortlisted')}
