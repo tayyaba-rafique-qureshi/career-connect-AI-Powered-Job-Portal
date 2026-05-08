@@ -61,6 +61,18 @@ exports.login = async (req, res) => {
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ message: 'Invalid email or password' })
 
+    // Check if user is banned
+    if (user.isBanned) {
+      return res.status(403).json({
+        message: `Your account has been banned. Reason: ${user.banReason || 'No reason provided'}`
+      })
+    }
+
+    // Update last login
+    user.lastLoginAt = new Date()
+    user.loginCount = (user.loginCount || 0) + 1
+    await user.save()
+
     res.json({
       token: generateToken(user),
       user: buildAuthUserPayload(user)

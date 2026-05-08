@@ -25,6 +25,7 @@ import EmployerMessages from './pages/employer/EmployerMessages'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRedirect from './components/RoleRedirect'
 
+
 const EMPLOYER_ROLES = ['recruiter', 'employer']
 
 function GuestRoute({ children }) {
@@ -105,7 +106,7 @@ export default function App() {
         } />
 
         {/* ── Admin ── */}
-        <Route path="/dashboard/admin" element={
+        <Route path="/dashboard/admin/*" element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
           </ProtectedRoute>
