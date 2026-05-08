@@ -14,7 +14,10 @@ import {
   ExternalLink,
   Menu,
   X,
-  Star
+  Star,
+  Flag,
+  CheckCircle,
+  Activity
 } from 'lucide-react'
 
 const AdminLayout = ({ children }) => {
@@ -23,17 +26,22 @@ const AdminLayout = ({ children }) => {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const navigation = [
+    const navigation = [
     { name: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
     { name: 'All Users', href: '/dashboard/admin/users', icon: Users },
     { name: 'All Jobs', href: '/dashboard/admin/jobs', icon: Briefcase },
     { name: 'Featured Jobs', href: '/dashboard/admin/jobs?featured=true', icon: Star },
     { name: 'Applications', href: '/dashboard/admin/applications', icon: FileText },
+    { name: 'Job Reports', href: '/dashboard/admin/job-reports', icon: Flag },
+    { name: 'Verifications', href: '/dashboard/admin/verifications', icon: CheckCircle },
     { name: 'Analytics', href: '/dashboard/admin/analytics', icon: BarChart2 },
+    { name: 'Banners', href: '/dashboard/admin/banners', icon: Megaphone },
+    { name: 'System Health', href: '/dashboard/admin/health', icon: Activity },
     { name: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
     { name: 'Announcements', href: '/dashboard/admin/announcements', icon: Megaphone },
     { name: 'Audit Logs', href: '/dashboard/admin/audit-logs', icon: ScrollText }
   ]
+
 
   const handleLogout = () => {
     logout()

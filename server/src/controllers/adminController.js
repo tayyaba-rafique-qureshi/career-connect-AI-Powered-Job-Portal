@@ -1952,10 +1952,12 @@ const updateDashboardWidgets = async (req, res) => {
     if (!settings) {
       settings = await Setting.create({
         key: 'platform_settings',
-        dashboardWidgets: widgets
+        dashboardWidgets: widgets,
+        updatedBy: req.user.id
       })
     } else {
       settings.dashboardWidgets = widgets
+      settings.updatedBy = req.user.id
       await settings.save()
     }
 
@@ -1978,75 +1980,57 @@ const updateDashboardWidgets = async (req, res) => {
   }
 }
 
-// ==================== MODULE EXPORTS ====================
 
+
+// ==================== MODULE EXPORTS ====================
 module.exports = {
-  // Dashboard
   getDashboardStats,
-  getDashboardWidgets,
-  updateDashboardWidgets,
-  
-  // User Management
   getAllUsers,
   getUserById,
   updateUserRole,
   toggleUserBan,
   deleteUser,
   impersonateUser,
-  
-  // Job Management
   getAllJobsAdmin,
   updateJobStatus,
   toggleFeatureJob,
   deleteJob,
-  
-  // Application Management
   getAllApplicationsAdmin,
   updateApplicationStatus,
-  
-  // Analytics
   getAnalytics,
-  
-  // Settings
   getSystemSettings,
   updateSystemSettings,
   sendPlatformAnnouncement,
-  
-  // Audit Logs
   getAuditLogs,
-  
-  // Job Reports
+  // Feature 1: Job Reports
   reportJob,
   getJobReports,
   resolveJobReport,
   getAllJobReports,
-  
-  // Employer Verification
+  // Feature 2: Employer Verification
   getVerificationRequests,
   reviewVerification,
   requestVerification,
-  
-  // Announcement Banners
+  // Feature 3: Announcement Banners
   getActiveBanners,
   getAllBanners,
   createBanner,
   updateBanner,
   deleteBanner,
   toggleBanner,
-  
-  // Bulk Actions
+  // Feature 4: Bulk Actions
   bulkUpdateUsers,
   bulkUpdateJobs,
-  
-  // Admin Notes
+  // Feature 5: Admin Notes
   getEntityNotes,
   createNote,
   updateNote,
   deleteNote,
-  
-  // Platform Health
+  // Feature 6: Platform Health
   getPlatformHealth,
-  
-  // Global Search
-  globalSearch
+  // Feature 7: Global Search
+  globalSearch,
+  // Feature 8: Dashboard Widgets
+  getDashboardWidgets,
+  updateDashboardWidgets
 }
