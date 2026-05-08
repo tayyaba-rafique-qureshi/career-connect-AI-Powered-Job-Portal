@@ -182,3 +182,15 @@ exports.sendPasswordResetEmail = ({ user, resetUrl }) => sendMail({
     </p>
   `)
 })
+
+// ─── Generic email sender for admin announcements ─────────────────────────────
+exports.sendEmail = async (to, subject, message) => {
+  return sendMail({
+    to,
+    subject,
+    html: base(`
+      <h2>${subject}</h2>
+      <p style="white-space: pre-wrap;">${message}</p>
+    `)
+  })
+}
