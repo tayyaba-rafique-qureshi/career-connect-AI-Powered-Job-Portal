@@ -13,6 +13,7 @@ const jobSchema = new mongoose.Schema({
   workMode:        { type: String, enum: ['remote', 'on-site', 'hybrid'], default: 'remote' },
   salaryMin:       { type: Number, default: null },
   salaryMax:       { type: Number, default: null },
+  salaryType:      { type: String, enum: ['yearly', 'monthly', 'stipend'], default: 'yearly' },
   status:          { type: String, enum: ['active', 'draft', 'closed'], default: 'draft' },
   postedBy:        { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   views:           { type: Number, default: 0 },
@@ -35,5 +36,8 @@ const jobSchema = new mongoose.Schema({
     resolution:  { type: String }
   }]
 }, { timestamps: true })
+
+// Text index for full-text search (GET /api/jobs/search)
+jobSchema.index({ title: 'text', description: 'text' })
 
 module.exports = mongoose.model('Job', jobSchema)

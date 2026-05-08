@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-  LayoutDashboard, Briefcase, PlusCircle, Menu, X, LogOut, ChevronRight
+  LayoutDashboard, Briefcase, PlusCircle, Menu, X, LogOut, ChevronRight, MessageSquare, Settings
 } from 'lucide-react'
+import { getUnreadMessageCount } from '../../services/messageService'
 
 const navItems = [
   { label: 'Dashboard',    href: '/dashboard/recruiter',      icon: LayoutDashboard },
   { label: 'Post a Job',   href: '/dashboard/recruiter/post-job', icon: PlusCircle },
   { label: 'My Jobs',      href: '/dashboard/recruiter/jobs', icon: Briefcase },
+  { label: 'Messages',     href: '/employer/messages', icon: MessageSquare },
 ]
 
 export default function EmployerLayout({ children }) {
@@ -16,6 +18,25 @@ export default function EmployerLayout({ children }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [unreadMsgs, setUnreadMsgs] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    const loadUnread = async () => {
+      try {
+        const count = await getUnreadMessageCount()
+        if (mounted) setUnreadMsgs(count)
+      } catch {
+        // ignore
+      }
+    }
+    loadUnread()
+    const interval = setInterval(loadUnread, 10000)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -52,8 +73,13 @@ export default function EmployerLayout({ children }) {
               }`}
             >
               <Icon size={18} />
-              {label}
-              {active && <ChevronRight size={14} className="ml-auto" />}
+              <span className="flex-1">{label}</span>
+              {label === 'Messages' && unreadMsgs > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 bg-[#E53935] text-white text-[11px] rounded-full inline-flex items-center justify-center">
+                  {unreadMsgs > 9 ? '9+' : unreadMsgs}
+                </span>
+              )}
+              {active && <ChevronRight size={14} />}
             </Link>
           )
         })}
@@ -70,6 +96,13 @@ export default function EmployerLayout({ children }) {
             <p className="text-xs text-[#595959] capitalize">{user?.role}</p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/recruiter')}
+          className="flex items-center gap-2 text-sm text-[#595959] hover:text-[#2557A7] transition-colors w-full px-2 py-1.5 rounded hover:bg-blue-50 mb-1"
+        >
+          <Settings size={16} />
+          Settings
+        </button>
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 text-sm text-[#595959] hover:text-red-500 transition-colors w-full px-2 py-1.5 rounded hover:bg-red-50"
