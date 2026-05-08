@@ -16,6 +16,7 @@ import JobApplicants from './pages/employer/JobApplicants'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRedirect from './components/RoleRedirect'
 
+
 const EMPLOYER_ROLES = ['recruiter', 'employer']
 
 function GuestRoute({ children }) {

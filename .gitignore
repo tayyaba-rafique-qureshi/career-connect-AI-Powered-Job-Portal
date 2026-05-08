@@ -41,3 +41,9 @@ desktop.ini
 # ─── Uploads / temp ────────────────────────────────────────────────────────────
 uploads/
 tmp/
+
+# ─── Admin Module Files ────────────────────────────────────────────────────────
+ADMIN_MODULE_IMPLEMENTATION_SUMMARY.md
+ADMIN_MODULE_SETUP.md
+ADMIN_MODULE_TEST_CHECKLIST.md
+.kiro/specs/admin-module/
