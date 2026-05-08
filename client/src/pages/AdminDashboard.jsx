@@ -8,6 +8,11 @@ import AdminAnalytics from './admin/AdminAnalytics'
 import AdminSettings from './admin/AdminSettings'
 import AdminAnnouncements from './admin/AdminAnnouncements'
 import AdminAuditLogs from './admin/AdminAuditLogs'
+import AdminJobReports from './admin/AdminJobReports'
+import AdminVerifications from './admin/AdminVerifications'
+import AdminBanners from './admin/AdminBanners'
+import AdminHealth from './admin/AdminHealth'
+
 
 export default function AdminDashboard() {
   return (
@@ -18,6 +23,10 @@ export default function AdminDashboard() {
         <Route path="jobs" element={<AdminJobs />} />
         <Route path="applications" element={<AdminApplications />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="job-reports" element={<AdminJobReports />} />
+        <Route path="verifications" element={<AdminVerifications />} />
+        <Route path="banners" element={<AdminBanners />} />
+        <Route path="health" element={<AdminHealth />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="announcements" element={<AdminAnnouncements />} />
         <Route path="audit-logs" element={<AdminAuditLogs />} />
