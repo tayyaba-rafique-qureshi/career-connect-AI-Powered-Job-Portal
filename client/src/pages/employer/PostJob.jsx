@@ -5,15 +5,21 @@ import TagInput from '../../components/onboarding/TagInput'
 import Toast from '../../components/employer/Toast'
 import api from '../../services/api'
 import {
-  Briefcase, MapPin, Users, Monitor, FileText,
+  Briefcase, MapPin, Users, Monitor, FileText, Building2,
   Eye, Loader2, ChevronDown
 } from 'lucide-react'
 
 const EXP_LEVELS   = ['any', 'entry', 'mid', 'senior', 'lead']
 const JOB_TYPES    = ['full-time', 'part-time', 'contract', 'internship']
 const WORK_MODES   = ['remote', 'on-site', 'hybrid']
+const SALARY_TYPES = [
+  { value: 'yearly',  label: 'Yearly',  rangeLabel: 'Annual Salary Range (PKR/yr)' },
+  { value: 'monthly', label: 'Monthly', rangeLabel: 'Monthly Salary Range (PKR/mo)' },
+  { value: 'stipend', label: 'Stipend (for internships)', rangeLabel: 'Monthly Stipend Range (PKR/mo)' },
+]
 
 const EMPTY_FORM = {
+  company:         '',
   title:           '',
   description:     '',
   requiredSkills:  [],
@@ -23,6 +29,7 @@ const EMPTY_FORM = {
   location:        '',
   salaryMin:       '',
   salaryMax:       '',
+  salaryType:      'yearly',
 }
 
 export default function PostJob() {
@@ -42,6 +49,7 @@ export default function PostJob() {
     api.get(`/jobs/${jobId}`)
       .then(({ data }) => {
         setForm({
+          company:         data.company         || '',
           title:           data.title           || '',
           description:     data.description     || '',
           requiredSkills:  data.requiredSkills  || data.skills || [],
@@ -51,6 +59,7 @@ export default function PostJob() {
           location:        data.location        || '',
           salaryMin:       data.salaryMin != null ? String(data.salaryMin) : '',
           salaryMax:       data.salaryMax != null ? String(data.salaryMax) : '',
+          salaryType:      data.salaryType      || 'yearly',
         })
       })
       .catch(() => setToast({ message: 'Failed to load job details.', type: 'error' }))
@@ -70,6 +79,7 @@ export default function PostJob() {
 
   const validate = () => {
     const e = {}
+    if (!form.company.trim())     e.company     = 'Company name is required'
     if (!form.title.trim())       e.title       = 'Job title is required'
     if (!form.description.trim()) e.description = 'Job description is required'
     if (form.jobType.length === 0) e.jobType    = 'Select at least one job type'
@@ -89,6 +99,7 @@ export default function PostJob() {
         status,
         salaryMin: form.salaryMin ? Number(form.salaryMin) : null,
         salaryMax: form.salaryMax ? Number(form.salaryMax) : null,
+        salaryType: form.salaryType || 'yearly',
       }
 
       // Temporary verification log — confirms correct status is being sent
@@ -114,6 +125,8 @@ export default function PostJob() {
     `w-full h-11 px-3 border rounded text-sm focus:outline-none focus:border-[#2557A7] focus:ring-2 focus:ring-blue-100 bg-white ${
       errors[field] ? 'border-red-400' : 'border-[#D4D2D0]'
     }`
+
+  const salarySuffix = form.salaryType === 'monthly' || form.salaryType === 'stipend' ? '/mo' : '/yr'
 
   if (loadingJob) {
     return (
@@ -141,6 +154,21 @@ export default function PostJob() {
       <div className="flex flex-col xl:flex-row gap-6">
         {/* ── Form ── */}
         <div className="flex-1 space-y-5">
+
+          {/* Title */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <label className="block text-sm font-semibold text-[#1A1A2E] mb-1">
+              <Building2 size={14} className="inline mr-1.5" />Company Name *
+            </label>
+            <input
+              type="text"
+              value={form.company}
+              onChange={e => set('company', e.target.value)}
+              placeholder="e.g. Contour Software"
+              className={inputCls('company')}
+            />
+            {errors.company && <p className="text-xs text-red-500 mt-1">{errors.company}</p>}
+          </div>
 
           {/* Title */}
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -269,29 +297,47 @@ export default function PostJob() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#1A1A2E] mb-1">
-                  <span className="inline mr-1.5 font-semibold">₨</span>Salary Range (PKR/yr)
+                  Salary Type
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={form.salaryMin}
-                    onChange={e => set('salaryMin', e.target.value)}
-                    placeholder="Min"
-                    min="0"
-                    className={inputCls('salaryMin')}
-                  />
-                  <span className="text-[#595959] text-sm flex-shrink-0">–</span>
-                  <input
-                    type="number"
-                    value={form.salaryMax}
-                    onChange={e => set('salaryMax', e.target.value)}
-                    placeholder="Max"
-                    min="0"
-                    className={inputCls('salaryMax')}
-                  />
+                <div className="relative">
+                  <select
+                    value={form.salaryType}
+                    onChange={e => set('salaryType', e.target.value)}
+                    className={`${inputCls('salaryType')} appearance-none pr-8`}
+                  >
+                    {SALARY_TYPES.map(s => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#595959] pointer-events-none" />
                 </div>
-                {errors.salaryMax && <p className="text-xs text-red-500 mt-1">{errors.salaryMax}</p>}
               </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-1">
+                <span className="inline mr-1.5 font-semibold">₨</span>
+                {SALARY_TYPES.find(s => s.value === form.salaryType)?.rangeLabel || 'Salary Range'}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={form.salaryMin}
+                  onChange={e => set('salaryMin', e.target.value)}
+                  placeholder="Min"
+                  min="0"
+                  className={inputCls('salaryMin')}
+                />
+                <span className="text-[#595959] text-sm flex-shrink-0">–</span>
+                <input
+                  type="number"
+                  value={form.salaryMax}
+                  onChange={e => set('salaryMax', e.target.value)}
+                  placeholder="Max"
+                  min="0"
+                  className={inputCls('salaryMax')}
+                />
+              </div>
+              {errors.salaryMax && <p className="text-xs text-red-500 mt-1">{errors.salaryMax}</p>}
             </div>
           </div>
 
@@ -335,6 +381,9 @@ export default function PostJob() {
                 <h3 className="text-base font-bold text-[#1A1A2E] leading-tight">
                   {form.title || <span className="text-gray-300">Job Title</span>}
                 </h3>
+                <p className="text-xs text-[#595959] mt-1">
+                  {form.company || <span className="text-gray-300">Company Name</span>}
+                </p>
 
                 <div className="flex flex-wrap gap-2 mt-2">
                   {form.workMode && (
@@ -364,10 +413,10 @@ export default function PostJob() {
                   <p className="text-xs text-[#595959] mt-1 flex items-center gap-1">
                     <span className="font-semibold text-xs">₨</span>
                     {form.salaryMin && form.salaryMax
-                      ? `Rs.${Number(form.salaryMin).toLocaleString()} – $${Number(form.salaryMax).toLocaleString()}/yr`
+                      ? `Rs.${Number(form.salaryMin).toLocaleString()} – Rs.${Number(form.salaryMax).toLocaleString()}${salarySuffix}`
                       : form.salaryMin
-                      ? `From Rs.${Number(form.salaryMin).toLocaleString()}/yr`
-                      : `Up to Rs.${Number(form.salaryMax).toLocaleString()}/yr`}
+                      ? `From Rs.${Number(form.salaryMin).toLocaleString()}${salarySuffix}`
+                      : `Up to Rs.${Number(form.salaryMax).toLocaleString()}${salarySuffix}`}
                   </p>
                 )}
 

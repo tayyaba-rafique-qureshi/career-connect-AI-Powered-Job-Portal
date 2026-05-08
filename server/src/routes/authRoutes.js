@@ -1,11 +1,16 @@
 const router = require('express').Router()
 const passport = require('passport')
 const jwt = require('jsonwebtoken')
-const { register, login } = require('../controllers/authController')
+const { register, login, forgotPassword, resetPassword, changePassword } = require('../controllers/authController')
+
+const { protect } = require('../middleware/authMiddleware')
 
 // Email/password auth
 router.post('/register', register)
 router.post('/login', login)
+router.post('/forgot-password', forgotPassword)
+router.post('/reset-password', resetPassword)
+router.patch('/change-password', protect, changePassword)
 
 // Google OAuth — step 1: redirect to Google
 router.get('/google', passport.authenticate('google', {

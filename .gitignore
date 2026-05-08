@@ -38,6 +38,9 @@ desktop.ini
 *.suo
 *.user
 
+# ─── AI agent workspace (local) ────────────────────────────────────────────────
+.claude/
+
 # ─── Uploads / temp ────────────────────────────────────────────────────────────
 uploads/
 tmp/

@@ -29,6 +29,12 @@ app.use('/api/jobs', require('./routes/jobRoutes'))
 app.use('/api/applications', require('./routes/applicationRoutes'))
 app.use('/api/admin', require('./routes/adminRoutes'))
 app.use('/api/users', require('./routes/onboardingRoutes'))
+app.use('/api/saved-jobs', require('./routes/savedJobRoutes'))
+app.use('/api/notifications', require('./routes/notificationRoutes'))
+app.use('/api/ai', require('./routes/aiRoutes'))
+app.use('/api/company-reviews', require('./routes/companyReviewRoutes'))
+app.use('/api/reviews', require('./routes/reviewRoutes'))
+app.use('/api/messages', require('./routes/messageRoutes'))
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

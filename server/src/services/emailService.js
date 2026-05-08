@@ -147,3 +147,38 @@ exports.sendNewApplicationEmail = ({ employer, applicant, job }) => sendMail({
     <a href="${process.env.CLIENT_URL}/dashboard/recruiter" class="btn">Review Application</a>
   `)
 })
+
+exports.sendJobMatchEmail = ({ applicant, job }) => sendMail({
+  to: applicant.email,
+  subject: `New ${job.title} job in ${job.location || 'your area'}`,
+  html: base(`
+    <h2>A New Job Matches Your Preferences!</h2>
+    <p>Hi <strong>${applicant.name}</strong>,</p>
+    <p>A new role has been posted that matches your profile:</p>
+    <div style="background:#f8f9fa; border-radius:8px; padding:16px; margin:16px 0;">
+      <p style="margin:0 0 4px; font-size:16px; font-weight:700; color:#1A1A2E;">${job.title}</p>
+      <p style="margin:0 0 4px; color:#595959;">${job.company}</p>
+      <p style="margin:0; color:#767676;">📍 ${job.location || 'Remote'} · ${(job.jobType || []).join(', ')} · ${job.workMode || 'remote'}</p>
+    </div>
+    <a href="${process.env.CLIENT_URL}/dashboard/applicant" class="btn">View Job</a>
+    <p style="margin-top:20px; color:#999; font-size:12px;">You're receiving this because your preferences match this job. <a href="${process.env.CLIENT_URL}/profile" style="color:#2557A7;">Update preferences</a></p>
+  `)
+})
+
+exports.sendPasswordResetEmail = ({ user, resetUrl }) => sendMail({
+  to: user.email,
+  subject: 'Reset your CareerConnect password',
+  html: base(`
+    <h2>Password Reset Request</h2>
+    <p>Hi <strong>${user.name}</strong>,</p>
+    <p>We received a request to reset your password. Click the button below to set a new one:</p>
+    <a href="${resetUrl}" class="btn">Reset Password</a>
+    <p style="margin-top:24px; color:#666; font-size:13px;">
+      This link expires in <strong>15 minutes</strong>. If you didn't request a password reset, you can safely ignore this email — your password won't change.
+    </p>
+    <p style="color:#999; font-size:12px; margin-top:16px;">
+      If the button doesn't work, copy and paste this link:<br/>
+      <a href="${resetUrl}" style="color:#2557A7; word-break:break-all;">${resetUrl}</a>
+    </p>
+  `)
+})
