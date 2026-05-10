@@ -96,3 +96,20 @@ When teammates open PRs (e.g. AI service, admin module):
 - Tayyaba Rafique
 - Samreen Farhat
 - Umama Hidayat
+
+## CI/CD Pipeline
+
+![CI](https://github.com/tayyaba-rafique-qureshi/career-connect-AI-Powered-Job-Portal/actions/workflows/ci.yml/badge.svg)
+
+GitHub Actions runs automatically on every push to `main` and every PR.
+
+| Job | What it tests |
+|---|---|
+| Backend Tests | Jest — auth API, jobs API, utility functions |
+| Frontend Tests | Vitest — components, utils + Vite build check |
+| AI Service Tests | pytest — similarity, A* search, API endpoints (28 tests) |
+
+**Setup — add MongoDB URI as a GitHub secret:**
+1. GitHub → repo → Settings → Secrets and variables → Actions
+2. New secret → Name: `MONGODB_URI` → Value: your Atlas URI
+3. CI uses a separate `careerconnect_test` database — never touches production data
