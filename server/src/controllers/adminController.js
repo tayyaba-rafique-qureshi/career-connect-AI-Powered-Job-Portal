@@ -10,6 +10,16 @@ const { sendEmail } = require('../services/emailService')
 const jwt = require('jsonwebtoken')
 const os = require('os')
 const mongoose = require('mongoose')
+const { isValidObjectId } = require('mongoose')
+
+// Helper to validate MongoDB ObjectId
+const validateId = (id, res) => {
+  if (!isValidObjectId(id)) {
+    res.status(400).json({ success: false, message: 'Invalid ID format' })
+    return false
+  }
+  return true
+}
 
 // ==================== DASHBOARD ====================
 
@@ -161,15 +171,21 @@ const getAllUsers = async (req, res) => {
       sortOrder = 'desc'
     } = req.query
 
+    console.log('getAllUsers called with query params:', req.query)
+
     const query = {}
     if (role) query.role = role
-    if (onboardingComplete !== undefined) query.onboardingComplete = onboardingComplete === 'true'
+    if (onboardingComplete !== undefined && onboardingComplete !== '') {
+      query.onboardingComplete = onboardingComplete === 'true'
+    }
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } }
       ]
     }
+
+    console.log('MongoDB query:', JSON.stringify(query))
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 }
@@ -182,6 +198,8 @@ const getAllUsers = async (req, res) => {
       .populate('bannedBy', 'name email')
 
     const total = await User.countDocuments(query)
+
+    console.log(`Found ${total} total users, returning ${users.length} users for page ${page}`)
 
     res.json({
       success: true,
@@ -205,6 +223,8 @@ const getAllUsers = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const user = await User.findById(req.params.id)
       .select('-password')
       .populate('bannedBy', 'name email')
@@ -226,6 +246,8 @@ const getUserById = async (req, res) => {
  */
 const updateUserRole = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { role } = req.body
     const validRoles = ['applicant', 'recruiter', 'employer', 'admin']
 
@@ -270,11 +292,18 @@ const updateUserRole = async (req, res) => {
  */
 const toggleUserBan = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { reason } = req.body
     const user = await User.findById(req.params.id)
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    // Prevent admin from banning themselves
+    if (user._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot perform this action on your own account' })
     }
 
     if (user.isBanned) {
@@ -339,9 +368,24 @@ const toggleUserBan = async (req, res) => {
  */
 const deleteUser = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const user = await User.findById(req.params.id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    // Prevent admin from deleting themselves
+    if (user._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot perform this action on your own account' })
+    }
+
+    // Prevent deleting the last admin
+    if (user.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' })
+      if (adminCount <= 1) {
+        return res.status(400).json({ success: false, message: 'Cannot delete the last admin account' })
+      }
     }
 
     // Delete user's jobs
@@ -377,6 +421,8 @@ const deleteUser = async (req, res) => {
  */
 const impersonateUser = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const user = await User.findById(req.params.id)
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
@@ -477,6 +523,8 @@ const getAllJobsAdmin = async (req, res) => {
  */
 const updateJobStatus = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { status } = req.body
     const validStatuses = ['active', 'draft', 'closed']
 
@@ -521,6 +569,8 @@ const updateJobStatus = async (req, res) => {
  */
 const toggleFeatureJob = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const job = await Job.findById(req.params.id)
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job not found' })
@@ -554,6 +604,8 @@ const toggleFeatureJob = async (req, res) => {
  */
 const deleteJob = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const job = await Job.findById(req.params.id)
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job not found' })
@@ -612,11 +664,14 @@ const getAllApplicationsAdmin = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
 
+    // Filter out orphaned records (job or applicant was deleted)
+    const valid = applications.filter(a => a.applicant && a.job)
+
     const total = await Application.countDocuments(query)
 
     res.json({
       success: true,
-      data: applications,
+      data: valid,
       pagination: {
         total,
         page: parseInt(page),
@@ -636,8 +691,10 @@ const getAllApplicationsAdmin = async (req, res) => {
  */
 const updateApplicationStatus = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { status } = req.body
-    const validStatuses = ['pending', 'reviewed', 'shortlisted', 'rejected', 'hired']
+    const validStatuses = ['pending', 'reviewed', 'shortlisted', 'rejected', 'accepted', 'archived']
 
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
@@ -647,8 +704,6 @@ const updateApplicationStatus = async (req, res) => {
     }
 
     const application = await Application.findById(req.params.id)
-      .populate('applicant', 'name email')
-      .populate('job', 'title company')
 
     if (!application) {
       return res.status(404).json({ success: false, message: 'Application not found' })
@@ -657,6 +712,10 @@ const updateApplicationStatus = async (req, res) => {
     const oldStatus = application.status
     application.status = status
     await application.save()
+
+    // Populate after saving to return full data
+    await application.populate('applicant', 'name email')
+    await application.populate('job', 'title company')
 
     await logAdminAction(
       req.user.id,
@@ -938,6 +997,8 @@ const getAuditLogs = async (req, res) => {
  */
 const reportJob = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { category, notes, severity } = req.body
     
     if (!category) {
@@ -986,6 +1047,8 @@ const reportJob = async (req, res) => {
  */
 const getJobReports = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const job = await Job.findById(req.params.id)
       .populate('adminReports.reportedBy', 'name email')
       .populate('adminReports.resolvedBy', 'name email')
@@ -1012,6 +1075,8 @@ const resolveJobReport = async (req, res) => {
   try {
     const { resolution, action } = req.body
     const { jobId, reportId } = req.params
+
+    if (!validateId(jobId, res)) return
 
     const job = await Job.findById(jobId)
     if (!job) {
@@ -1170,6 +1235,8 @@ const getVerificationRequests = async (req, res) => {
  */
 const reviewVerification = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { action, rejectedReason } = req.body
     
     if (!['approve', 'reject'].includes(action)) {
@@ -1362,6 +1429,8 @@ const createBanner = async (req, res) => {
  */
 const updateBanner = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const updates = req.body
     const banner = await AnnouncementBanner.findByIdAndUpdate(
       req.params.id,
@@ -1398,6 +1467,8 @@ const updateBanner = async (req, res) => {
  */
 const deleteBanner = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const banner = await AnnouncementBanner.findByIdAndDelete(req.params.id)
 
     if (!banner) {
@@ -1428,6 +1499,8 @@ const deleteBanner = async (req, res) => {
  */
 const toggleBanner = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const banner = await AnnouncementBanner.findById(req.params.id)
 
     if (!banner) {
@@ -1695,6 +1768,8 @@ const createNote = async (req, res) => {
  */
 const updateNote = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const { note, color, isPinned } = req.body
 
     const existingNote = await AdminNote.findById(req.params.id)
@@ -1736,6 +1811,8 @@ const updateNote = async (req, res) => {
  */
 const deleteNote = async (req, res) => {
   try {
+    if (!validateId(req.params.id, res)) return
+
     const note = await AdminNote.findByIdAndDelete(req.params.id)
 
     if (!note) {
@@ -1775,6 +1852,14 @@ const getPlatformHealth = async (req, res) => {
     const userCount = await User.countDocuments()
     const jobCount = await Job.countDocuments({ deletedAt: null })
     const applicationCount = await Application.countDocuments()
+    const announcementCount = await AnnouncementBanner.countDocuments()
+    const auditLogCount = await AuditLog.countDocuments()
+    
+    // Job reports count
+    const reportCount = await Job.aggregate([
+      { $project: { reportCount: { $size: { $ifNull: ['$adminReports', []] } } } },
+      { $group: { _id: null, total: { $sum: '$reportCount' } } }
+    ])
     
     // System stats
     const systemStats = {
@@ -1785,16 +1870,20 @@ const getPlatformHealth = async (req, res) => {
       freeMemory: os.freemem(),
       usedMemory: os.totalmem() - os.freemem(),
       memoryUsagePercent: ((os.totalmem() - os.freemem()) / os.totalmem() * 100).toFixed(2),
-      uptime: os.uptime(),
+      osUptime: os.uptime(),          // Machine/OS uptime
       nodeVersion: process.version
     }
 
     // Process stats
     const processStats = {
       pid: process.pid,
-      uptime: process.uptime(),
+      appUptime: process.uptime(),    // Actual application/server uptime
       memoryUsage: process.memoryUsage()
     }
+
+    // Database connection status
+    const dbStatus = mongoose.connection.readyState // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+    const dbStatusLabel = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbStatus] || 'unknown'
 
     // Recent activity (last hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
@@ -1811,12 +1900,17 @@ const getPlatformHealth = async (req, res) => {
           storageSize: dbStats.storageSize,
           indexes: dbStats.indexes,
           indexSize: dbStats.indexSize,
-          avgObjSize: dbStats.avgObjSize
+          avgObjSize: dbStats.avgObjSize,
+          status: dbStatusLabel,
+          connectionState: dbStatus
         },
         collections: {
           users: userCount,
           jobs: jobCount,
-          applications: applicationCount
+          applications: applicationCount,
+          announcements: announcementCount,
+          auditLogs: auditLogCount,
+          jobReports: reportCount[0]?.total || 0
         },
         system: systemStats,
         process: processStats,
