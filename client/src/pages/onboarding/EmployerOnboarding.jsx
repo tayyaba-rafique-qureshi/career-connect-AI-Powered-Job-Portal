@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import StepWrapper from '../../components/onboarding/StepWrapper'
@@ -35,6 +35,10 @@ const sel = (props) => (
 export default function EmployerOnboarding() {
   const { user, markProfileComplete } = useAuth()
   const navigate = useNavigate()
+
+  // Admin accounts have no onboarding — redirect away immediately
+  if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />
+
   const [step, setStep] = useState(1)
   const [saved, setSaved] = useState(false)
   const [errors, setErrors] = useState({})
