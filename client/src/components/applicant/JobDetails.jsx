@@ -39,8 +39,10 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
   )
 
   const skills = job.requiredSkills || job.skills || []
-  const score  = matchData?.matchScore
-  const tier   = score != null ? matchTier(score) : null
+  const resumeScore = matchData?.resumeScore ?? matchData?.matchScore
+  const skillScore = matchData?.skillScore
+  const score = resumeScore
+  const tier = score != null ? matchTier(score) : null
   const salaryText = formatSalary(job.salaryMin, job.salaryMax, job.salaryType)
 
   return (
@@ -155,7 +157,7 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
             <div>
               <p style={{ fontSize: '16px', fontWeight: '700', color: tier.color, margin: '0 0 4px' }}>{tier.label}</p>
               <p style={{ fontSize: '13px', color: '#595959', margin: 0, lineHeight: 1.5 }}>
-                Here's how your profile aligns with this job's requirements.
+                Here's how your resume aligns with this job's requirements.
               </p>
               <button style={{
                 fontSize: '13px', color: '#2557A7', background: 'none',
@@ -168,6 +170,24 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
                 How is this calculated?
               </button>
             </div>
+          </div>
+
+          {/* Score breakdown */}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <div style={{
+              padding: '6px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '700',
+              backgroundColor: '#E7F5E8', color: '#137333'
+            }}>
+              Resume match: {resumeScore?.toFixed(2)}%
+            </div>
+            {skillScore != null && (
+              <div style={{
+                padding: '6px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '700',
+                backgroundColor: '#FFF4E0', color: '#B45309'
+              }}>
+                Skill match: {skillScore.toFixed(2)}%
+              </div>
+            )}
           </div>
 
           {/* Skills columns */}
@@ -217,6 +237,22 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
               >
                 Update your profile →
               </a>
+            </div>
+          )}
+
+          {/* ATS recommendations */}
+          {matchData.atsRecommendations?.length > 0 && (
+            <div style={{
+              marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #D0E4FF'
+            }}>
+              <p style={{ fontSize: '13px', fontWeight: '700', color: '#1A1A2E', margin: '0 0 8px' }}>
+                ATS tips to improve your resume
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '18px', color: '#595959', fontSize: '13px' }}>
+                {matchData.atsRecommendations.map((tip) => (
+                  <li key={tip} style={{ marginBottom: '6px' }}>{tip}</li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

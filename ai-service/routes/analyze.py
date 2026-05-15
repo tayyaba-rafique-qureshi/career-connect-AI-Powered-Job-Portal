@@ -12,20 +12,17 @@ This file handles HTTP only:
 No business logic lives here.  No database calls live in services/.
 """
 
-import io
-import pdfplumber
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from models.schemas import (
-    ExtractRequest,
     MatchRequest,
     MatchResponse,
+    RecommendationsResponse,
     SearchRequest,
     SearchResponse,
-    StatusResponse,
 )
 from services.preprocessing import preprocess_job, preprocess_resume
 from services.similarity import (
@@ -33,6 +30,15 @@ from services.similarity import (
     calculate_cosine_similarity,
     run_astar_search,
 )
+from services.matching_engine import calculate_match_score
+from services.feedback_generator import (
+    generate_applicant_feedback,
+    generate_recruiter_feedback,
+)
+from services.recommendation_engine import get_recommendations
+from services.graph_builder import build_job_graph as _build_graph, get_starting_nodes
+from services.astar_search import run_astar
+from services.career_advisor import get_career_recommendations
 from utils.text_utils import get_skill_overlap
 
 router = APIRouter()
@@ -103,7 +109,7 @@ def _applicant_skills(applicant: dict) -> list[str]:
 
 # ── POST /match ───────────────────────────────────────────────────────────────
 
-@router.post("/match", response_model=MatchResponse)
+@router.post("/match")
 async def match(payload: MatchRequest, db: Database = Depends(get_db)):
     """
     Calculate the AI match score between an applicant and a specific job.
@@ -123,7 +129,7 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
     applicant = _get_applicant(db, payload.applicant_id)
     job       = _get_job(db, payload.job_id)
 
-    # ── Resume text ──────────────────────────────────────────────────────────
+    # ── Resume text — required for a meaningful score ─────────────────────────
     resume_text: str = (
         applicant.get("applicantProfile", {})
         .get("resume", {})
@@ -136,27 +142,49 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
             detail="Applicant has no resume text. Please upload and extract a resume first.",
         )
 
-    # ── Skills ───────────────────────────────────────────────────────────────
-    applicant_skills = _applicant_skills(applicant)
-    job_skills: list[str] = job.get("requiredSkills") or job.get("skills") or []
+    # ── Delegate all scoring to the matching engine ───────────────────────────
+    result = calculate_match_score(applicant_data=applicant, job_data=job)
 
-    # ── Preprocessing ────────────────────────────────────────────────────────
-    clean_resume = preprocess_resume(resume_text)
-    clean_job    = preprocess_job(job.get("description", ""), job_skills)
-
-    # ── Similarity ───────────────────────────────────────────────────────────
-    score = calculate_cosine_similarity(clean_resume, clean_job)
-
-    # ── Skill overlap ────────────────────────────────────────────────────────
-    matched, missing = get_skill_overlap(applicant_skills, job_skills)
-
-    print(f"[/match] score={score}  matched={len(matched)}  missing={len(missing)}")
-
-    return MatchResponse(
-        matchScore=score,
-        skillsMatched=matched,
-        skillsMissing=missing,
+    # ── Log each component score ──────────────────────────────────────────────
+    bd = result["breakdown"]
+    print(
+        f"[/match] Skill: {bd['skillScore']['score']}% | "
+        f"Semantic: {bd['semanticScore']['score']}% | "
+        f"Experience: {bd['experienceScore']['score']}% | "
+        f"Tools: {bd['toolsScore']['score']}%"
     )
+    print(
+        f"[/match] finalScore={result['finalScore']}  "
+        f"matched={result['matchCount']}/{result['totalRequired']}  "
+        f"expMatch={result['experienceMatch']}"
+    )
+
+    # ── Map matching_engine output to MatchResponse schema ────────────────────
+    # MatchResponse.breakdown expects ScoreBreakdown-shaped dicts; the engine
+    # already returns {score, weight, contribution} for each component.
+    # response_model is not set on this endpoint so applicantFeedback and
+    # recruiterFeedback are included without being stripped by Pydantic.
+
+    # ── Generate explainable AI feedback ─────────────────────────────────────
+    applicant_feedback = generate_applicant_feedback(
+        match_result=result,
+        job_data=job,
+    )
+    recruiter_feedback = generate_recruiter_feedback(
+        match_result=result,
+        applicant_data=applicant,
+    )
+
+    return {
+        "matchScore":        result["finalScore"],
+        "skillsMatched":     result["skillsMatched"],
+        "skillsMissing":     result["skillsMissing"],
+        "breakdown":         result["breakdown"],
+        "feedback":          result["feedback"],
+        "experienceMatch":   result["experienceMatch"],
+        "applicantFeedback": applicant_feedback,
+        "recruiterFeedback": recruiter_feedback,
+    }
 
 
 # ── GET /recommend/{applicant_id} ─────────────────────────────────────────────
@@ -253,6 +281,85 @@ async def recommend(
     return {"jobs": top, "total": len(top)}
 
 
+# ── GET /recommendations/{applicant_id} ───────────────────────────────────────
+
+@router.get("/recommendations/{applicant_id}", response_model=RecommendationsResponse)
+async def recommendations(
+    applicant_id: str,
+    threshold: float = 60.0,
+    db: Database = Depends(get_db),
+):
+    """
+    Return up to 20 personalised job recommendations for an applicant,
+    ranked by the hybrid AI match score with preference boosts applied.
+
+    Unlike the legacy /recommend endpoint (TF-IDF only), this endpoint
+    uses the full four-component matching engine (skill match, semantic
+    similarity, experience alignment, tools match) plus explainable
+    applicant feedback for each result.
+
+    Applicants with no resume text are handled gracefully — the engine
+    falls back to skill-list semantic similarity automatically.
+
+    Already-applied jobs are excluded from results.
+
+    Parameters
+    ----------
+    applicant_id : str   — MongoDB ObjectId string
+    threshold    : float — minimum match score to include (default 60.0)
+
+    Returns
+    -------
+    RecommendationsResponse with:
+        applicantId           : str
+        totalJobsAnalyzed     : int
+        recommendationsFound  : int
+        threshold             : float
+        recommendations       : list of up to 20 RecommendationItem
+    """
+    print(f"[/recommendations] applicant_id={applicant_id}  threshold={threshold}")
+
+    applicant = _get_applicant(db, applicant_id)
+
+    # ── Fetch all active jobs ─────────────────────────────────────────────────
+    raw_jobs = list(db["jobs"].find({"status": "active"}))
+
+    # Stringify ObjectIds so the engine and JSON serialiser never see BSON types
+    for job in raw_jobs:
+        job["_id"] = str(job["_id"])
+
+    total_jobs = len(raw_jobs)
+
+    # ── Fetch job IDs the applicant has already applied to ────────────────────
+    applicant_oid = _parse_object_id(applicant_id, "applicant_id")
+    applied_docs  = list(db["applications"].find(
+        {"applicant": applicant_oid},
+        {"job": 1, "_id": 0},
+    ))
+    applied_job_ids: list[str] = [str(doc["job"]) for doc in applied_docs if "job" in doc]
+
+    # ── Delegate scoring + filtering to the recommendation engine ─────────────
+    results = get_recommendations(
+        applicant_data=applicant,
+        all_jobs=raw_jobs,
+        threshold=threshold,
+        applied_job_ids=applied_job_ids,
+    )
+
+    print(
+        f"Analyzing {total_jobs} jobs for applicant {applicant_id} "
+        f"— {len(results)} passed threshold"
+    )
+
+    return RecommendationsResponse(
+        applicantId=applicant_id,
+        totalJobsAnalyzed=total_jobs,
+        recommendationsFound=len(results),
+        threshold=threshold,
+        recommendations=results,
+    )
+
+
 # ── POST /search ──────────────────────────────────────────────────────────────
 
 @router.post("/search", response_model=SearchResponse)
@@ -271,7 +378,7 @@ async def search(payload: SearchRequest, db: Database = Depends(get_db)):
     print(f"[/search] applicant_id={payload.applicant_id}  threshold={payload.threshold}")
 
     applicant = _get_applicant(db, payload.applicant_id)
-    applicant_skills = _applicant_skills(applicant)
+    applicant_skills = get_combined_applicant_skills(applicant)
 
     # Fetch all active jobs
     jobs = list(db["jobs"].find({"status": "active"}))
@@ -300,91 +407,238 @@ async def search(payload: SearchRequest, db: Database = Depends(get_db)):
     )
 
 
-# ── POST /extract-resume ──────────────────────────────────────────────────────
+# ── POST /astar-search ───────────────────────────────────────────────────────
 
-@router.post("/extract-resume", response_model=StatusResponse)
-async def extract_resume(payload: ExtractRequest, db: Database = Depends(get_db)):
+@router.post("/astar-search")
+async def astar_search(payload: SearchRequest, db: Database = Depends(get_db)):
     """
-    Extract text from an applicant's PDF resume stored in MongoDB GridFS,
-    clean it, and persist it back to user.applicantProfile.resume.rawText.
+    Run A* graph search over all active jobs to find the best match for
+    an applicant above a configurable threshold.
 
-    Steps:
-      1. Fetch the applicant document.
-      2. Locate the GridFS file ID from applicantProfile.resume.fileUrl
-         or a dedicated gridfsId field.
-      3. Stream the PDF bytes from GridFS.
-      4. Extract all text page-by-page using pdfplumber.
-      5. Clean the text via the preprocessing service.
-      6. Update the user document in MongoDB.
-      7. Return a StatusResponse with the character count.
+    The job graph connects jobs that share at least one required skill.
+    A* uses h(n) = 100 - match_score as its heuristic, prioritising nodes
+    closer to a perfect match.  The response includes the full exploration
+    path and efficiency metrics for assignment report documentation.
 
-    Returns 400 if no resume file reference is found on the applicant.
-    Returns 404 if the GridFS file does not exist.
+    Parameters
+    ----------
+    applicant_id : str   — MongoDB ObjectId string
+    threshold    : float — goal score (default 90.0)
+
+    Returns
+    -------
+    Full A* result dict including:
+        algorithm, found, finalScore, goalThreshold,
+        totalNodesExplored, totalNodesInGraph, efficiency,
+        explorationPath, heuristicUsed
     """
-    print(f"[/extract-resume] applicant_id={payload.applicant_id}")
+    print(f"[/astar-search] applicant_id={payload.applicant_id}  threshold={payload.threshold}")
+
+    applicant        = _get_applicant(db, payload.applicant_id)
+    applicant_skills = get_combined_applicant_skills(applicant)
+
+    # ── Fetch all active jobs and stringify ObjectIds ─────────────────────────
+    raw_jobs = list(db["jobs"].find({"status": "active"}))
+    for job in raw_jobs:
+        job["_id"] = str(job["_id"])
+
+    total_nodes = len(raw_jobs)
+
+    if not raw_jobs:
+        return {
+            "algorithm":           "A*",
+            "found":               None,
+            "finalScore":          0.0,
+            "goalThreshold":       payload.threshold,
+            "totalNodesExplored":  0,
+            "totalNodesInGraph":   0,
+            "efficiency":          "100% nodes skipped",
+            "explorationPath":     [],
+            "heuristicUsed":       "h(n) = 100 - match_score",
+        }
+
+    # ── Build graph using the dedicated graph_builder module ──────────────────
+    graph = _build_graph(raw_jobs)
+
+    # ── Run A* using the dedicated astar_search module ────────────────────────
+    result = run_astar(
+        applicant_skills=applicant_skills,
+        jobs=raw_jobs,
+        graph=graph,
+        threshold=payload.threshold,
+    )
+
+    # ── Required log line ─────────────────────────────────────────────────────
+    explored = result["totalNodesExplored"]
+    skipped  = total_nodes - explored
+    pct      = round((skipped / total_nodes) * 100) if total_nodes else 0
+    print(
+        f"A* explored {explored}/{total_nodes} nodes ({pct}% efficient)"
+    )
+
+    return result
+
+
+# ── GET /career-advice/{applicant_id}/{job_id} ────────────────────────────────
+
+@router.get("/career-advice/{applicant_id}/{job_id}")
+async def career_advice(
+    applicant_id: str,
+    job_id: str,
+    db: Database = Depends(get_db),
+):
+    """
+    Generate personalised career path recommendations for an applicant
+    relative to a specific job they want to qualify for.
+
+    Fetches the applicant and job, runs the matching engine to get the
+    current skill gap, then delegates to career_advisor for actionable
+    advice: immediate learning actions, short-term goals, a career path
+    suggestion, and an estimated score improvement.
+
+    Parameters
+    ----------
+    applicant_id : str — MongoDB ObjectId string
+    job_id       : str — MongoDB ObjectId string
+
+    Returns
+    -------
+    dict with keys:
+        applicantId              : str
+        jobId                    : str
+        jobTitle                 : str
+        currentMatchScore        : float
+        skillsMatched            : list[str]
+        skillsMissing            : list[str]
+        careerAdvice             : dict  — from career_advisor.get_career_recommendations()
+    """
+    print(f"[/career-advice] applicant_id={applicant_id}  job_id={job_id}")
+
+    applicant = _get_applicant(db, applicant_id)
+    job       = _get_job(db, job_id)
+
+    # ── Run the matching engine to get current gap ────────────────────────────
+    match_result = calculate_match_score(applicant_data=applicant, job_data=job)
+
+    current_skills: list[str] = get_combined_applicant_skills(applicant)
+    missing_skills: list[str] = match_result["skillsMissing"]
+
+    # ── Generate career advice ────────────────────────────────────────────────
+    advice = get_career_recommendations(
+        missing_skills=missing_skills,
+        current_skills=current_skills,
+        job_data=job,
+    )
+
+    print(
+        f"[/career-advice] score={match_result['finalScore']}  "
+        f"missing={len(missing_skills)}  "
+        f"path='{advice['careerPathSuggestion']}'"
+    )
+
+    return {
+        "applicantId":       applicant_id,
+        "jobId":             job_id,
+        "jobTitle":          job.get("title", ""),
+        "currentMatchScore": match_result["finalScore"],
+        "skillsMatched":     match_result["skillsMatched"],
+        "skillsMissing":     missing_skills,
+        "careerAdvice":      advice,
+    }
+
+
+# ── POST /debug-skills ────────────────────────────────────────────────────────
+# DEBUG ENDPOINT — remove before production
+
+from pydantic import BaseModel as _BaseModel
+from services.skill_extractor import (
+    extract_skills_from_text,
+    normalize_skills_list,
+    calculate_skill_match,
+    get_combined_applicant_skills,
+)
+
+
+class _DebugSkillsRequest(_BaseModel):
+    applicant_id: str
+    job_id: str
+
+
+@router.post("/debug-skills")
+async def debug_skills(payload: _DebugSkillsRequest, db: Database = Depends(get_db)):
+    """
+    Debug endpoint: shows every stage of skill extraction and matching for
+    a given applicant/job pair so mismatches can be diagnosed quickly.
+
+    Returns
+    -------
+    applicantSkillsRaw
+        The raw skill entries exactly as stored in MongoDB
+        (may be strings or {"name": ..., "level": ...} dicts).
+
+    applicantSkillsNormalized
+        The same list after normalize_skills_list() — flat strings only.
+        This is what the matching engine actually uses.
+
+    jobRequiredSkills
+        requiredSkills (or legacy skills) from the job document.
+
+    skillsExtractedFromResumeText
+        Skills detected by regex scan of the applicant's stored resume
+        text (applicantProfile.resume.rawText).  These SUPPLEMENT the
+        structured profile skills — they never replace them.
+
+    matchBreakdown
+        Output of calculate_skill_match() comparing the union of
+        (normalised profile skills + text-extracted skills) against
+        the job's required skills.
+    """
+    print(f"[/debug-skills] applicant_id={payload.applicant_id}  job_id={payload.job_id}")
 
     applicant = _get_applicant(db, payload.applicant_id)
+    job       = _get_job(db, payload.job_id)
 
-    # ── Locate the GridFS file reference ────────────────────────────────────
-    resume_info = (applicant.get("applicantProfile") or {}).get("resume") or {}
-    gridfs_id_raw = resume_info.get("gridfsId") or resume_info.get("fileId")
-
-    if not gridfs_id_raw:
-        raise HTTPException(
-            status_code=400,
-            detail="No resume file found for this applicant. Please upload a PDF first.",
-        )
-
-    gridfs_oid = _parse_object_id(str(gridfs_id_raw), "gridfsId")
-
-    # ── Stream PDF from GridFS ───────────────────────────────────────────────
-    import gridfs as gridfs_module
-    fs = gridfs_module.GridFS(db)
-
-    try:
-        grid_out = fs.get(gridfs_oid)
-    except gridfs_module.errors.NoFile:
-        raise HTTPException(
-            status_code=404,
-            detail=f"GridFS file '{gridfs_id_raw}' not found.",
-        )
-
-    pdf_bytes = grid_out.read()
-
-    # ── Extract text with pdfplumber ─────────────────────────────────────────
-    raw_pages: list[str] = []
-    try:
-        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    raw_pages.append(page_text)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to parse PDF: {exc}",
-        )
-
-    raw_text = "\n".join(raw_pages)
-    if not raw_text.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="PDF was parsed but contained no extractable text (may be image-based).",
-        )
-
-    # ── Clean and persist ────────────────────────────────────────────────────
-    clean = preprocess_resume(raw_text)
-
-    applicant_oid = _parse_object_id(payload.applicant_id, "applicant_id")
-    db["users"].update_one(
-        {"_id": applicant_oid},
-        {"$set": {"applicantProfile.resume.rawText": clean}},
+    # ── Raw skills from applicant profile ────────────────────────────────────
+    skills_raw = (
+        applicant.get("applicantProfile", {}).get("skills", []) or []
     )
 
-    char_count = len(clean)
-    print(f"[/extract-resume] extracted {char_count} chars for applicant {payload.applicant_id}")
+    # ── Normalised profile skills ─────────────────────────────────────────────
+    skills_normalized = normalize_skills_list(skills_raw)
 
-    return StatusResponse(
-        message=f"Resume extracted and saved successfully ({char_count} characters).",
-        success=True,
+    # ── Job required skills ───────────────────────────────────────────────────
+    job_skills: list[str] = job.get("requiredSkills") or job.get("skills") or []
+
+    # ── Skills extracted from resume text ────────────────────────────────────
+    resume_text: str = (
+        applicant.get("applicantProfile", {})
+        .get("resume", {})
+        .get("rawText", "")
+        or ""
     )
+    skills_from_text = extract_skills_from_text(resume_text)
+
+    # ── Combined applicant skills (profile + text, deduplicated) ─────────────
+    # Text-extracted skills supplement structured profile skills; they do
+    # NOT replace them.  Profile skills take precedence for ordering.
+    combined_lower: set[str] = {s.lower() for s in skills_normalized}
+    supplemental   = [s for s in skills_from_text if s.lower() not in combined_lower]
+    all_applicant_skills = skills_normalized + supplemental
+
+    # ── Match breakdown ───────────────────────────────────────────────────────
+    match_breakdown = calculate_skill_match(all_applicant_skills, job_skills)
+
+    print(
+        f"[/debug-skills] profile_skills={len(skills_normalized)}  "
+        f"text_skills={len(skills_from_text)}  "
+        f"job_skills={len(job_skills)}  "
+        f"matchScore={match_breakdown['matchScore']}"
+    )
+
+    return {
+        "applicantSkillsRaw":            skills_raw,
+        "applicantSkillsNormalized":     skills_normalized,
+        "jobRequiredSkills":             job_skills,
+        "skillsExtractedFromResumeText": skills_from_text,
+        "matchBreakdown":                match_breakdown,
+    }

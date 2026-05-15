@@ -60,9 +60,9 @@ export default function Login() {
           recruiter: '/onboarding/employer',
           employer:  '/onboarding/employer',
         }
-        navigate(onboardingRoute[data.user.role] ?? '/onboarding/applicant')
+        navigate(onboardingRoute[data.user.role] ?? '/onboarding/applicant', { replace: true })
       } else {
-        navigate(roleHome[data.user.role] ?? '/dashboard/applicant')
+        navigate(roleHome[data.user.role] ?? '/dashboard/applicant', { replace: true })
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')

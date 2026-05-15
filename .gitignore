@@ -17,6 +17,10 @@ ai-service/*.pyc
 ai-service/**/*.pyc
 ai-service/venv/
 ai-service/.venv/
+tests/**/__pycache__/
+tests/**/*.pyc
+**/__pycache__/
+**/*.pyc
 
 # ─── Build outputs ─────────────────────────────────────────────────────────────
 client/dist/

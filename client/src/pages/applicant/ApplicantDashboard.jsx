@@ -7,7 +7,7 @@ import JobCard from '../../components/applicant/JobCard'
 import JobDetails from '../../components/applicant/JobDetails'
 import FilterModal from '../../components/applicant/FilterModal'
 import ApplyModal from '../../components/applicant/ApplyModal'
-import { fetchJobs, searchJobs, getRecommendedJobs, fetchJobById } from '../../services/jobService'
+import { fetchJobs, searchJobs, getRecommendedJobs, fetchJobById, getAIMatch } from '../../services/jobService'
 import { saveJob, unsaveJob, getSavedJobIds, getMyApplications } from '../../services/applicationService'
 
 const SORT_OPTIONS = [
@@ -110,21 +110,20 @@ export default function ApplicantDashboard() {
       .catch(() => {})
   }, [])
 
-  // AI match — disabled until ai-service module is implemented
-  // When ready, re-enable this useEffect to call getAIMatch(id)
-  // useEffect(() => {
-  //   if (!selectedJob) return
-  //   const id = selectedJob._id
-  //   if (matchCache.current[id]) {
-  //     setMatchData(prev => ({ ...prev, [id]: matchCache.current[id] }))
-  //     return
-  //   }
-  //   setMatchLoading(true)
-  //   getAIMatch(id)
-  //     .then(data => { matchCache.current[id] = data; setMatchData(prev => ({ ...prev, [id]: data })) })
-  //     .catch(() => {})
-  //     .finally(() => setMatchLoading(false))
-  // }, [selectedJob])
+  // AI match — fetch live score whenever a job is selected
+  useEffect(() => {
+    if (!selectedJob) return
+    const id = selectedJob._id
+    if (matchCache.current[id]) {
+      setMatchData(prev => ({ ...prev, [id]: matchCache.current[id] }))
+      return
+    }
+    setMatchLoading(true)
+    getAIMatch(id)
+      .then(data => { matchCache.current[id] = data; setMatchData(prev => ({ ...prev, [id]: data })) })
+      .catch(() => {})
+      .finally(() => setMatchLoading(false))
+  }, [selectedJob])
 
   // Filter + search + recommendations
   useEffect(() => {
@@ -149,7 +148,7 @@ export default function ApplicantDashboard() {
     // When no search active, put recommended jobs first (deduplicated)
     // Only reorder — never re-introduce jobs that were already filtered out
     if (!hasSearch && recommendedJobs.length > 0) {
-      const recIds = new Set(recommendedJobs.map(j => j._id))
+      const recIds = new Set(recommendedJobs.map(j => j._id || j.job_id))
       const recommended = result.filter(j => recIds.has(j._id))
       const rest = result.filter(j => !recIds.has(j._id))
       result = [...recommended, ...rest]
