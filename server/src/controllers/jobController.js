@@ -4,6 +4,7 @@ const User = require('../models/User')
 const Notification = require('../models/Notification')
 const Report = require('../models/Report')
 const { sendJobMatchEmail } = require('../services/emailService')
+const aiService = require('../services/aiService')
 
 // ─── Public ───────────────────────────────────────────────────────────────────
 
@@ -212,7 +213,7 @@ exports.updateJobStatus = async (req, res) => {
   }
 }
 
-// GET /api/jobs/:id/applicants — get all applicants for a job with mock AI scores
+// GET /api/jobs/:id/applicants — get all applicants for a job, enriched with live AI match scores
 exports.getJobApplicants = async (req, res) => {
   try {
     const job = await Job.findOne({ _id: req.params.id, postedBy: req.user.id })
@@ -234,32 +235,44 @@ exports.getJobApplicants = async (req, res) => {
 
     const jobSkills = job.requiredSkills || job.skills || []
 
-    const enriched = applications.map((app) => {
-      // TODO: Replace with real AI service call
-      // Call POST /api/ai/match with { applicant_id, job_id } to get a live score
-      // from the Python AI service instead of this deterministic mock.
-      // Deterministic mock score seeded by applicant ID until AI service is connected
-      const idSum = app.applicant._id.toString()
-        .split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-      const mockScore = app.aiScore !== null
-        ? app.aiScore
-        : 60 + (idSum % 40) // 60–99
-
-      // Skills matched (mock: compare applicant skills to job required skills)
+    // Build enriched applicant list with real AI match scores.
+    // Strategy: prefer the score saved on the Application at apply-time;
+    // if missing (legacy data), call the AI service live; if AI is
+    // unreachable, fall back to a local skill-overlap ratio so the
+    // recruiter still sees a useful number.
+    const enriched = await Promise.all(applications.map(async (app) => {
       const applicantSkills = (app.applicant.applicantProfile?.skills || [])
         .map(s => (typeof s === 'string' ? s : s.name).toLowerCase())
       const matched = jobSkills.filter(s => applicantSkills.includes(s.toLowerCase()))
       const missing = jobSkills.filter(s => !applicantSkills.includes(s.toLowerCase()))
 
+      let matchScore = null
+      if (app.aiScore != null) {
+        // Stored score is 0-1 → convert to 0-100 percentage
+        matchScore = Math.round(app.aiScore * 100)
+      } else {
+        const live = await aiService.matchApplicantToJob(
+          app.applicant._id.toString(),
+          job._id.toString()
+        )
+        if (live.matchScore != null) {
+          matchScore = Math.round(live.matchScore)
+        } else if (jobSkills.length > 0) {
+          matchScore = Math.round((matched.length / jobSkills.length) * 100)
+        } else {
+          matchScore = 0
+        }
+      }
+
       return {
         ...app.toObject(),
-        matchScore: mockScore,
+        matchScore,
         skillsMatched: matched.length,
         totalSkills: jobSkills.length,
         matchedSkills: matched,
         missingSkills: missing
       }
-    })
+    }))
 
     // Sort by match score descending
     enriched.sort((a, b) => b.matchScore - a.matchScore)
