@@ -69,6 +69,54 @@ class TestMatchEndpoint:
         res = client.post("/api/ai/match", json={"applicant_id": "507f1f77bcf86cd799439011"})
         assert res.status_code == 422
 
+    def test_match_response_shape_when_applicant_found(self):
+        """
+        Override the mock to return a realistic applicant + job so the
+        endpoint reaches the scoring logic and we can assert on the
+        response shape (new fields: breakdown, feedback, experienceMatch).
+        """
+        from unittest.mock import MagicMock
+        from routes.analyze import get_db
+
+        def rich_mock_db():
+            db = MagicMock()
+            db["users"].find_one.return_value = {
+                "_id": "507f1f77bcf86cd799439011",
+                "applicantProfile": {
+                    "resume": {"rawText": "python developer django rest api postgresql"},
+                    "skills": [{"name": "Python"}, {"name": "Django"}],
+                    "professionalInfo": {"yearsOfExp": "3"},
+                },
+            }
+            db["jobs"].find_one.return_value = {
+                "_id": "507f1f77bcf86cd799439012",
+                "title": "Backend Developer",
+                "description": "Build REST APIs with Python and Django",
+                "requiredSkills": ["Python", "Django", "PostgreSQL"],
+                "experienceLevel": "mid",
+            }
+            return db
+
+        test_app.dependency_overrides[get_db] = rich_mock_db
+        res = client.post("/api/ai/match", json={
+            "applicant_id": "507f1f77bcf86cd799439011",
+            "job_id":       "507f1f77bcf86cd799439012",
+        })
+        # Restore original mock
+        test_app.dependency_overrides[get_db] = mock_db
+
+        assert res.status_code == 200
+        body = res.json()
+        assert "matchScore" in body
+        assert "skillsMatched" in body
+        assert "skillsMissing" in body
+        assert "breakdown" in body
+        assert "feedback" in body
+        assert "experienceMatch" in body
+        assert isinstance(body["matchScore"], float)
+        assert 0.0 <= body["matchScore"] <= 100.0
+        assert body["experienceMatch"] in ("match", "under", "over", "unknown")
+
 
 class TestSearchEndpoint:
     def test_empty_jobs_returns_empty_result(self):
