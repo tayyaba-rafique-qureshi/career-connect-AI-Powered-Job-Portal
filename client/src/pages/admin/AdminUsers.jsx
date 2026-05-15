@@ -10,7 +10,7 @@ const AdminUsers = () => {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 })
-  const [filters, setFilters] = useState({ search: '', role: '', onboardingComplete: '' })
+  const [filters, setFilters] = useState({}) // Changed from { search: '', role: '', onboardingComplete: '' }
   const [toast, setToast] = useState(null)
   const [activeMenu, setActiveMenu] = useState(null)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', user: null })
@@ -19,7 +19,7 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers()
-  }, [pagination.page, filters])
+  }, [pagination.page, filters.search, filters.role, filters.onboardingComplete]) // More specific dependencies
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -29,10 +29,15 @@ const AdminUsers = () => {
         limit: pagination.limit,
         ...filters
       }
+      console.log('Fetching users with params:', params)
       const response = await getUsers(params)
+      console.log('Users response:', response.data)
+      console.log('Total users in DB:', response.data.pagination.total)
+      console.log('Users fetched:', response.data.data.length)
       setUsers(response.data.data)
       setPagination(prev => ({ ...prev, ...response.data.pagination }))
     } catch (error) {
+      console.error('Error fetching users:', error)
       setToast({ message: error.response?.data?.message || 'Failed to fetch users', type: 'error' })
     } finally {
       setLoading(false)
@@ -40,7 +45,16 @@ const AdminUsers = () => {
   }
 
   const handleSearch = (e) => {
-    setFilters(prev => ({ ...prev, search: e.target.value }))
+    const value = e.target.value
+    setFilters(prev => {
+      const newFilters = { ...prev }
+      if (value) {
+        newFilters.search = value
+      } else {
+        delete newFilters.search
+      }
+      return newFilters
+    })
     setPagination(prev => ({ ...prev, page: 1 }))
   }
 
@@ -87,6 +101,18 @@ const AdminUsers = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm text-gray-600">
+            {loading ? (
+              'Loading...'
+            ) : (
+              <>
+                Showing <span className="font-semibold">{users.length}</span> of{' '}
+                <span className="font-semibold">{pagination.total}</span> users
+              </>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <div className="relative">
@@ -94,15 +120,27 @@ const AdminUsers = () => {
               <input
                 type="text"
                 placeholder="Search by name or email..."
-                value={filters.search}
+                value={filters.search || ''}
                 onChange={handleSearch}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2557a7] focus:border-transparent"
               />
             </div>
           </div>
           <select
-            value={filters.role}
-            onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
+            value={filters.role || ''}
+            onChange={(e) => {
+              const value = e.target.value
+              setFilters(prev => {
+                const newFilters = { ...prev }
+                if (value) {
+                  newFilters.role = value
+                } else {
+                  delete newFilters.role
+                }
+                return newFilters
+              })
+              setPagination(prev => ({ ...prev, page: 1 }))
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2557a7] focus:border-transparent"
           >
             <option value="">All Roles</option>
@@ -112,8 +150,20 @@ const AdminUsers = () => {
             <option value="admin">Admin</option>
           </select>
           <select
-            value={filters.onboardingComplete}
-            onChange={(e) => setFilters(prev => ({ ...prev, onboardingComplete: e.target.value }))}
+            value={filters.onboardingComplete || ''}
+            onChange={(e) => {
+              const value = e.target.value
+              setFilters(prev => {
+                const newFilters = { ...prev }
+                if (value) {
+                  newFilters.onboardingComplete = value
+                } else {
+                  delete newFilters.onboardingComplete
+                }
+                return newFilters
+              })
+              setPagination(prev => ({ ...prev, page: 1 }))
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2557a7] focus:border-transparent"
           >
             <option value="">All Status</option>
