@@ -63,10 +63,11 @@ def get_chrome_driver():
     options.add_argument("--disable-browser-side-navigation")
     options.add_argument("--disable-features=VizDisplayCompositor")
     
-    # Create driver with webdriver-manager (auto-downloads correct ChromeDriver version)
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-    
+    # Use Selenium Manager (built into Selenium 4.6+) for reliable driver resolution.
+    # This avoids the webdriver-manager 4.0.1 bug where it picks THIRD_PARTY_NOTICES
+    # instead of chromedriver.exe on Windows.
+    driver = webdriver.Chrome(options=options)
+
     return driver
 
 
