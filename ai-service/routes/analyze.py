@@ -13,6 +13,7 @@ No business logic lives here.  No database calls live in services/.
 """
 
 import io
+from collections import Counter
 import pdfplumber
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -28,12 +29,8 @@ from models.schemas import (
     StatusResponse,
 )
 from services.preprocessing import preprocess_job, preprocess_resume
-from services.similarity import (
-    build_job_graph,
-    calculate_cosine_similarity,
-    run_astar_search,
-)
-from utils.text_utils import get_skill_overlap
+from services.similarity import calculate_cosine_similarity
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 router = APIRouter()
 
@@ -86,19 +83,59 @@ def _get_job(db: Database, job_id: str) -> dict:
     return doc
 
 
-def _applicant_skills(applicant: dict) -> list[str]:
+def _resume_skill_overlap(resume_text: str, job_skills: list[str]) -> tuple[list[str], list[str]]:
     """
-    Extract a flat list of skill name strings from an applicant document.
-    Handles both the structured {name, level} format and plain strings.
+    Compare job skills against resume text (case-insensitive) and return
+    which skills appear in the resume vs which are missing.
     """
-    raw = applicant.get("applicantProfile", {}).get("skills", []) or []
-    result = []
-    for s in raw:
-        if isinstance(s, dict):
-            result.append(s.get("name", ""))
-        elif isinstance(s, str):
-            result.append(s)
-    return [s for s in result if s]
+    if not job_skills:
+        return [], []
+
+    clean_resume = preprocess_resume(resume_text)
+    padded_resume = f" {clean_resume} "
+
+    matched: list[str] = []
+    missing: list[str] = []
+
+    for skill in job_skills:
+        skill_clean = preprocess_resume(skill)
+        if skill_clean and f" {skill_clean} " in padded_resume:
+            matched.append(skill)
+        else:
+            missing.append(skill)
+
+    return matched, missing
+
+
+def _ats_recommendations(resume_text: str, job_text: str, job_skills: list[str]) -> list[str]:
+    """
+    Generate short, actionable ATS-style recommendations based on
+    job text, job skills, and resume content.
+    """
+    tips: list[str] = []
+
+    clean_resume = preprocess_resume(resume_text)
+    clean_job = preprocess_resume(job_text)
+
+    resume_tokens = set(clean_resume.split())
+    job_tokens = [t for t in clean_job.split() if t not in ENGLISH_STOP_WORDS and len(t) > 2]
+
+    if len(clean_resume) < 700:
+        tips.append("Expand your resume with more role-specific details and achievements.")
+
+    # Missing skill hints
+    matched, missing = _resume_skill_overlap(resume_text, job_skills)
+    if missing:
+        listed = ", ".join(missing[:5])
+        tips.append(f"If applicable, add these skills: {listed}.")
+
+    # Missing keyword hints (top job terms not found in resume)
+    missing_keywords = [w for w, _ in Counter(job_tokens).most_common(6) if w not in resume_tokens]
+    if missing_keywords:
+        listed = ", ".join(missing_keywords[:6])
+        tips.append(f"Include relevant keywords from the job post: {listed}.")
+
+    return tips[:3]
 
 
 # ── POST /match ───────────────────────────────────────────────────────────────
@@ -136,8 +173,6 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
             detail="Applicant has no resume text. Please upload and extract a resume first.",
         )
 
-    # ── Skills ───────────────────────────────────────────────────────────────
-    applicant_skills = _applicant_skills(applicant)
     job_skills: list[str] = job.get("requiredSkills") or job.get("skills") or []
 
     # ── Preprocessing ────────────────────────────────────────────────────────
@@ -145,17 +180,27 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
     clean_job    = preprocess_job(job.get("description", ""), job_skills)
 
     # ── Similarity ───────────────────────────────────────────────────────────
-    score = calculate_cosine_similarity(clean_resume, clean_job)
+    resume_score = calculate_cosine_similarity(clean_resume, clean_job)
 
     # ── Skill overlap ────────────────────────────────────────────────────────
-    matched, missing = get_skill_overlap(applicant_skills, job_skills)
+    matched, missing = _resume_skill_overlap(resume_text, job_skills)
+    skill_score = round((len(matched) / max(len(job_skills), 1)) * 100, 2)
 
-    print(f"[/match] score={score}  matched={len(matched)}  missing={len(missing)}")
+    job_text = f"{job.get('title', '')} {job.get('description', '')}"
+    ats_recommendations = _ats_recommendations(resume_text, job_text, job_skills)
+
+    print(
+        f"[/match] resume_score={resume_score}  skill_score={skill_score}  "
+        f"matched={len(matched)}  missing={len(missing)}"
+    )
 
     return MatchResponse(
-        matchScore=score,
+        matchScore=resume_score,
+        resumeScore=resume_score,
+        skillScore=skill_score,
         skillsMatched=matched,
         skillsMissing=missing,
+        atsRecommendations=ats_recommendations,
     )
 
 
@@ -193,13 +238,18 @@ async def recommend(
         .get("rawText", "")
         or ""
     )
-    applicant_skills = _applicant_skills(applicant)
     prefs = applicant.get("applicantProfile", {}).get("preferences", {}) or {}
     pref_job_types: list[str] = [t.lower() for t in (prefs.get("jobType") or [])]
     pref_work_mode: str       = (prefs.get("workMode") or "").lower()
     pref_locations: list[str] = [l.lower() for l in (prefs.get("preferredLocations") or [])]
 
-    clean_resume = preprocess_resume(resume_text) if resume_text.strip() else ""
+    if not resume_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Applicant has no resume text. Please upload and extract a resume first.",
+        )
+
+    clean_resume = preprocess_resume(resume_text)
 
     # ── Fetch active jobs ────────────────────────────────────────────────────
     jobs = list(db["jobs"].find({"status": "active"}))
@@ -219,14 +269,9 @@ async def recommend(
         if pref_work_mode and job.get("workMode", "").lower() != pref_work_mode:
             continue
 
-        # Compute similarity
-        if clean_resume:
-            clean_job = preprocess_job(job.get("description", ""), job_skills)
-            score = calculate_cosine_similarity(clean_resume, clean_job)
-        else:
-            # Fall back to pure skill overlap when no resume text is available
-            matched, _ = get_skill_overlap(applicant_skills, job_skills)
-            score = round((len(matched) / max(len(job_skills), 1)) * 100, 2)
+        # Compute similarity using resume text
+        clean_job = preprocess_job(job.get("description", ""), job_skills)
+        score = calculate_cosine_similarity(clean_resume, clean_job)
 
         if score < threshold:
             continue
@@ -271,7 +316,17 @@ async def search(payload: SearchRequest, db: Database = Depends(get_db)):
     print(f"[/search] applicant_id={payload.applicant_id}  threshold={payload.threshold}")
 
     applicant = _get_applicant(db, payload.applicant_id)
-    applicant_skills = _applicant_skills(applicant)
+    resume_text: str = (
+        applicant.get("applicantProfile", {})
+        .get("resume", {})
+        .get("rawText", "")
+        or ""
+    )
+    if not resume_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Applicant has no resume text. Please upload and extract a resume first.",
+        )
 
     # Fetch all active jobs
     jobs = list(db["jobs"].find({"status": "active"}))
@@ -282,21 +337,46 @@ async def search(payload: SearchRequest, db: Database = Depends(get_db)):
     for job in jobs:
         job["_id"] = str(job["_id"])
 
-    graph = build_job_graph(jobs)
-    result = run_astar_search(applicant_skills, jobs, graph, payload.threshold)
+    clean_resume = preprocess_resume(resume_text)
+
+    explored = []
+    best_job = None
+    best_score = 0.0
+
+    for job in jobs:
+        job_skills: list[str] = job.get("requiredSkills") or job.get("skills") or []
+        clean_job = preprocess_job(job.get("description", ""), job_skills)
+        score = calculate_cosine_similarity(clean_resume, clean_job)
+
+        explored.append({
+            "job_id": job.get("_id"),
+            "title": job.get("title", ""),
+            "score": round(score, 2),
+            "g": 0.0,
+            "h": round(100.0 - score, 2),
+            "f": round(100.0 - score, 2),
+        })
+
+        if score > best_score:
+            best_score = score
+            best_job = job
+
+    explored.sort(key=lambda x: x["score"], reverse=True)
+
+    found = best_job if best_score >= payload.threshold else None
 
     print(
-        f"[/search] steps={result['steps']}  "
-        f"found={'yes' if result['found'] else 'no'}  "
-        f"score={result['score']}"
+        f"[/search] steps={len(jobs)}  "
+        f"found={'yes' if found else 'no'}  "
+        f"score={best_score}"
     )
 
     return SearchResponse(
-        found=result["found"],
-        score=result["score"],
-        steps=result["steps"],
-        explored=result["explored"],
-        algorithm="A*",
+        found=found,
+        score=round(best_score, 2),
+        steps=len(jobs),
+        explored=explored,
+        algorithm="Cosine",
     )
 
 

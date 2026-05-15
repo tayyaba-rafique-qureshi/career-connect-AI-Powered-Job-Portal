@@ -24,6 +24,19 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
+  // ── Back/forward cache (bfcache) defense ─────────────────────────────────
+  // When Chrome restores a page from bfcache, React route guards do NOT re-run,
+  // so a previous user's rendered page can briefly appear after they log out
+  // and a different user logs in. Force a full reload on bfcache restore so
+  // ProtectedRoute / RoleRedirect re-evaluate against the current auth state.
+  useEffect(() => {
+    const onPageShow = (e) => {
+      if (e.persisted) window.location.reload()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
+
   const _persist = (token, userData) => {
     setUser(userData)
     localStorage.setItem('token', token)
@@ -72,6 +85,9 @@ export function AuthProvider({ children }) {
     setUser(null)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    // Hard navigation: wipes React state, replaces the current history entry,
+    // and bypasses bfcache so the previous user's pages can't be revisited.
+    window.location.replace('/login')
   }
 
   return (

@@ -42,15 +42,23 @@ exports.applyToJob = async (req, res) => {
     const storedResumeText = applicant?.applicantProfile?.resume?.rawText || ''
     const effectiveResumeText = resumeText || storedResumeText
 
-    // Compute AI score
-    const aiScore = await aiService.analyzeMatch(effectiveResumeText, job.description)
+    // Compute AI score via the AI microservice using ID-based contract.
+    // matchApplicantToJob hits POST /api/ai/match with {applicant_id, job_id}
+    // and returns { matchScore (0-100), skillsMatched, skillsMissing }.
+    const aiResult = await aiService.matchApplicantToJob(req.user.id, job._id.toString())
+    // Convert 0-100 to 0-1 to match the existing Application.aiScore convention.
+    const aiScore = aiResult.matchScore != null ? aiResult.matchScore / 100 : null
 
-    // Compute skill match against job required skills
+    // Use AI-service skill computation if available, otherwise fall back to local compute.
     const applicantSkillList = (applicant?.applicantProfile?.skills || [])
       .map(s => (typeof s === 'string' ? s : s.name || '').toLowerCase())
     const requiredSkills = job.requiredSkills || []
-    const skillsMatched = requiredSkills.filter(s => applicantSkillList.includes(s.toLowerCase()))
-    const skillsMissing = requiredSkills.filter(s => !applicantSkillList.includes(s.toLowerCase()))
+    const skillsMatched = aiResult.skillsMatched.length
+      ? aiResult.skillsMatched
+      : requiredSkills.filter(s => applicantSkillList.includes(s.toLowerCase()))
+    const skillsMissing = aiResult.skillsMissing.length
+      ? aiResult.skillsMissing
+      : requiredSkills.filter(s => !applicantSkillList.includes(s.toLowerCase()))
 
     const application = await Application.create({
       job: job._id,
