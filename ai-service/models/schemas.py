@@ -58,8 +58,11 @@ class MatchResponse(BaseModel):
     matchScore is 0–100 (percentage).
     """
     matchScore: float
+    resumeScore: float
+    skillScore: float
     skillsMatched: list[str]
     skillsMissing: list[str]
+    atsRecommendations: list[str]
 
 
 class RecommendedJob(BaseModel):
