@@ -23,6 +23,7 @@ import ProfilePage from './pages/applicant/ProfilePage'
 import CompanyReviews from './pages/applicant/CompanyReviews'
 import EmployerMessages from './pages/employer/EmployerMessages'
 import ProtectedRoute from './components/ProtectedRoute'
+import OnboardingRoute from './components/OnboardingRoute'
 import RoleRedirect from './components/RoleRedirect'
 
 
@@ -113,16 +114,8 @@ export default function App() {
         } />
 
         {/* ── Onboarding ── */}
-        <Route path="/onboarding/applicant" element={
-          <ProtectedRoute allowedRoles={['applicant', 'recruiter']}>
-            <ApplicantOnboarding />
-          </ProtectedRoute>
-        } />
-        <Route path="/onboarding/employer" element={
-          <ProtectedRoute allowedRoles={['employer']}>
-            <EmployerOnboarding />
-          </ProtectedRoute>
-        } />
+        <Route path="/onboarding/applicant" element={<OnboardingRoute><ApplicantOnboarding /></OnboardingRoute>} />
+        <Route path="/onboarding/employer"  element={<OnboardingRoute><EmployerOnboarding /></OnboardingRoute>} />
 
         {/* ── Auth ── */}
         <Route path="/auth/callback" element={<AuthCallback />} />

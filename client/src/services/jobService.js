@@ -21,10 +21,10 @@ export const getAIMatch = async (jobId) => {
   return data
 }
 
-// GET /api/jobs/recommended
+// GET /api/ai/recommend
 export const getRecommendedJobs = async () => {
-  const { data } = await api.get('/jobs/recommended')
-  return data
+  const { data } = await api.get('/ai/recommend')
+  return data.jobs || []
 }
 
 export const reportJob = async (jobId, reason, description = '') => {
