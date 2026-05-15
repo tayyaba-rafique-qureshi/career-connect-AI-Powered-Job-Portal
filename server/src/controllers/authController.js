@@ -11,41 +11,65 @@ const buildAuthUserPayload = (user) => ({
   email: user.email,
   role: user.role,
   avatar: user.avatar || null,
-  onboardingComplete: user.onboardingComplete,
-  isProfileComplete: user.isProfileComplete,
+  onboardingComplete: user.role === 'admin' ? true : user.onboardingComplete,
+  isProfileComplete: user.role === 'admin' ? true : user.isProfileComplete,
   applicantProfile: user.applicantProfile || null,
   employerProfile: user.employerProfile || null,
 })
 
 exports.register = async (req, res) => {
   try {
+    console.log('📝 Registration attempt:', { name: req.body.name, email: req.body.email, role: req.body.role })
+    
     const { name, email, password, role } = req.body
 
     // Basic validation
-    if (!name || !email || !password)
+    if (!name || !email || !password) {
+      console.log('❌ Validation failed: Missing required fields')
       return res.status(400).json({ message: 'Name, email and password are required' })
+    }
 
-    if (password.length < 6)
+    if (password.length < 6) {
+      console.log('❌ Validation failed: Password too short')
       return res.status(400).json({ message: 'Password must be at least 6 characters' })
+    }
 
     // Prevent admin role from being set via public registration
-    if (role === 'admin')
+    if (role === 'admin') {
+      console.log('❌ Validation failed: Attempted admin registration')
       return res.status(403).json({ message: 'Cannot register as admin' })
+    }
 
+    console.log('🔍 Checking if email exists...')
     const existing = await User.findOne({ email })
-    if (existing)
+    if (existing) {
+      console.log('❌ Email already exists:', email)
       return res.status(400).json({ message: 'Email already in use' })
+    }
 
+    console.log('✅ Creating user...')
     const user = await User.create({ name, email, password, role })
+    console.log('✅ User created successfully:', user._id)
 
     // Fire-and-forget — welcome email doesn't block registration response
-    sendWelcomeEmail(user)
+    console.log('📧 Sending welcome email...')
+    sendWelcomeEmail(user).catch(err => {
+      console.error('⚠️  Welcome email failed (non-blocking):', err.message)
+    })
 
+    console.log('✅ Registration successful for:', email)
     res.status(201).json({
       token: generateToken(user),
       user: buildAuthUserPayload(user)
     })
   } catch (err) {
+    console.error('❌ Registration error:', err)
+    console.error('Error details:', {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    })
     res.status(500).json({ message: err.message })
   }
 }
@@ -94,6 +118,17 @@ exports.forgotPassword = async (req, res) => {
     if (!email) return res.status(400).json({ message: 'Email is required' })
 
     const user = await User.findOne({ email: email.toLowerCase() })
+
+    // Admin accounts must never use email-based password reset
+    // Return generic success message (don't reveal it's admin for security)
+    if (user && user.role === 'admin') {
+      console.log('Admin password reset attempt blocked for:', email)
+      // Return same message as if email doesn't exist (security best practice)
+      return res.status(200).json({ 
+        success: true,
+        message: 'If that email exists, a reset link has been sent.'
+      })
+    }
 
     // Always return 200 — don't reveal whether email exists (security)
     if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' })
@@ -147,6 +182,11 @@ exports.resetPassword = async (req, res) => {
 
     const user = await User.findOne({ _id: resetRecord.user, email: email.toLowerCase() })
     if (!user) return res.status(400).json({ message: 'Invalid reset request' })
+
+    // Admin accounts must never use email-based password reset
+    if (user.role === 'admin') {
+      return res.status(400).json({ message: 'Invalid reset request' })
+    }
 
     user.password = newPassword  // pre-save hook hashes it
     await user.save()

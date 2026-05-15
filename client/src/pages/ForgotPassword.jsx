@@ -14,10 +14,16 @@ export default function ForgotPassword() {
     setError('')
     setStatus('loading')
     try {
-      await api.post('/auth/forgot-password', { email })
+      const response = await api.post('/auth/forgot-password', { email })
+      
+      console.log('Forgot password response:', response.data)
+      
       setStatus('sent')
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.')
+      console.log('Forgot password error:', err.response?.data)
+      
+      const errorMessage = err.response?.data?.message || 'Something went wrong. Please try again.'
+      setError(errorMessage)
       setStatus('error')
     }
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, MoreVertical, Trash2, Star, Eye } from 'lucide-react'
 import StatusBadge from '../../components/admin/StatusBadge'
 import Pagination from '../../components/admin/Pagination'
@@ -7,6 +8,9 @@ import AdminToast from '../../components/admin/AdminToast'
 import { getJobs, updateJobStatus, toggleFeatureJob, deleteJob } from '../../services/adminService'
 
 const AdminJobs = () => {
+  const [searchParams] = useSearchParams()
+  const isFeaturedView = searchParams.get('featured') === 'true'
+  
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 })
@@ -29,8 +33,19 @@ const AdminJobs = () => {
         ...filters
       }
       const response = await getJobs(params)
-      setJobs(response.data.data)
-      setPagination(prev => ({ ...prev, ...response.data.pagination }))
+      
+      // Filter for featured jobs if in featured view
+      let jobsData = response.data.data
+      if (isFeaturedView) {
+        jobsData = jobsData.filter(job => job.isFeatured)
+      }
+      
+      setJobs(jobsData)
+      setPagination(prev => ({ 
+        ...prev, 
+        ...response.data.pagination,
+        total: isFeaturedView ? jobsData.length : response.data.pagination.total
+      }))
     } catch (error) {
       setToast({ message: error.response?.data?.message || 'Failed to fetch jobs', type: 'error' })
     } finally {
@@ -77,6 +92,14 @@ const AdminJobs = () => {
   return (
     <div className="space-y-6">
       {toast && <AdminToast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Page Title */}
+      {isFeaturedView && (
+        <div className="flex items-center gap-2">
+          <Star className="h-6 w-6 text-yellow-500 fill-yellow-500" />
+          <h2 className="text-2xl font-bold text-gray-900">Featured Jobs</h2>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
