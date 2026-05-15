@@ -65,6 +65,7 @@ async def lifespan(app: FastAPI):
         sys.exit(1)
 
     try:
+        print("[startup] CareerConnect AI Service starting...")
         print("[startup] Connecting to MongoDB Atlas…")
         _mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=8000)
         # Verify the connection is live before accepting traffic
@@ -103,6 +104,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",   # Vite default dev port
         "http://localhost:3001",   # CareerConnect client dev port
+        "http://localhost:5000",   # Node.js Express server
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -118,7 +120,7 @@ app.dependency_overrides[route_get_db] = get_db
 # ── Routers ───────────────────────────────────────────────────────────────────
 
 app.include_router(analyze_router, prefix="/api/ai", tags=["AI"])
-app.include_router(resume_router, prefix="/api", tags=["resume"])
+app.include_router(resume_router, prefix="/api/ai", tags=["Resume"])
 
 # ── Health check ─────────────────────────────────────────────────────────────
 
