@@ -113,8 +113,16 @@ export default function App() {
         } />
 
         {/* ── Onboarding ── */}
-        <Route path="/onboarding/applicant" element={<ProtectedRoute><ApplicantOnboarding /></ProtectedRoute>} />
-        <Route path="/onboarding/employer"  element={<ProtectedRoute><EmployerOnboarding /></ProtectedRoute>} />
+        <Route path="/onboarding/applicant" element={
+          <ProtectedRoute allowedRoles={['applicant', 'recruiter']}>
+            <ApplicantOnboarding />
+          </ProtectedRoute>
+        } />
+        <Route path="/onboarding/employer" element={
+          <ProtectedRoute allowedRoles={['employer']}>
+            <EmployerOnboarding />
+          </ProtectedRoute>
+        } />
 
         {/* ── Auth ── */}
         <Route path="/auth/callback" element={<AuthCallback />} />

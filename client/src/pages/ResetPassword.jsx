@@ -85,7 +85,16 @@ export default function ResetPassword() {
       setStatus('success')
       setTimeout(() => navigate('/login'), 3000)
     } catch (err) {
-      setError(err.response?.data?.message || 'Reset failed. The link may have expired.')
+      const errorMessage = err.response?.data?.message || 'Reset failed. The link may have expired.'
+      
+      // Special handling for admin accounts or invalid requests
+      if (errorMessage.toLowerCase().includes('admin') || errorMessage.toLowerCase().includes('invalid')) {
+        setError('This reset link is not valid. Admin accounts cannot reset passwords through this form. Please sign in and use the admin dashboard.')
+        // Redirect to login after 5 seconds
+        setTimeout(() => navigate('/login'), 5000)
+      } else {
+        setError(errorMessage)
+      }
       setStatus('error')
     }
   }
