@@ -67,6 +67,7 @@ exports.saveStep = async (req, res) => {
     if (role === 'applicant' || role === 'recruiter') {
       if (!user.applicantProfile) user.applicantProfile = {}
       const p = user.applicantProfile
+      const isOnboarding = !user.onboardingComplete
 
       if (step === 1) p.basicInfo        = { ...p.basicInfo,        ...data }
       if (step === 2) p.professionalInfo = { ...p.professionalInfo, ...data }
@@ -74,6 +75,12 @@ exports.saveStep = async (req, res) => {
       if (step === 4) p.preferences      = { ...p.preferences,      ...data }
 
       if (step === 5) {
+        const hasExistingResume = !!p.resume?.fileId
+
+        if (!req.file && isOnboarding && !hasExistingResume) {
+          return res.status(400).json({ message: 'Resume is required to complete onboarding' })
+        }
+
         // Handle resume file upload
         if (req.file) {
           // Delete old resume from GridFS if exists
@@ -88,6 +95,10 @@ exports.saveStep = async (req, res) => {
 
           // Extract text via Python AI service
           const rawText = await extractResumeText(fileId)
+          if (!rawText || !rawText.trim()) {
+            await deleteOldResume(fileId)
+            return res.status(400).json({ message: 'Resume text extraction failed. Please upload a text-based PDF.' })
+          }
 
           p.resume = {
             fileId,
@@ -98,14 +109,23 @@ exports.saveStep = async (req, res) => {
             storedSize:     compressedSize,
             wasCompressed:  compressed
           }
+        } else if (isOnboarding && hasExistingResume && !p.resume?.rawText?.trim()) {
+          const rawText = await extractResumeText(p.resume.fileId)
+          if (!rawText || !rawText.trim()) {
+            return res.status(400).json({ message: 'Resume text extraction failed. Please upload a text-based PDF.' })
+          }
+          p.resume = { ...p.resume, rawText }
         }
 
         // Save other step 5 fields
         p.profileSummary = data.profileSummary || p.profileSummary
         p.linkedinUrl    = data.linkedinUrl    || p.linkedinUrl
         p.portfolioUrl   = data.portfolioUrl   || p.portfolioUrl
-        user.onboardingComplete = true
-        sendOnboardingCompleteEmail(user)
+
+        if (isOnboarding) {
+          user.onboardingComplete = true
+          sendOnboardingCompleteEmail(user)
+        }
       }
 
       user.markModified('applicantProfile')

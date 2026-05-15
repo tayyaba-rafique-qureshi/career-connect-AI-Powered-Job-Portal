@@ -66,11 +66,18 @@ export default function ApplyModal({ job, matchData, onClose, onSuccess }) {
 
             {/* AI Match */}
             {matchData?.matchScore !== null && matchData?.matchScore !== undefined && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
-                <AIMatchBadge score={matchData.matchScore} size="lg" />
-                <span className="text-xs text-[#595959]">
-                  {matchData.skillsMatched?.length || 0} of {(matchData.skillsMatched?.length || 0) + (matchData.skillsMissing?.length || 0)} skills matched
-                </span>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <AIMatchBadge score={matchData.resumeScore ?? matchData.matchScore} size="lg" />
+                  <span className="text-xs text-[#595959]">
+                    {matchData.skillsMatched?.length || 0} of {(matchData.skillsMatched?.length || 0) + (matchData.skillsMissing?.length || 0)} skills matched
+                  </span>
+                </div>
+                {matchData.skillScore != null && (
+                  <div className="mt-2 text-xs text-[#595959]">
+                    Resume match: {matchData.resumeScore?.toFixed(2)}% · Skill match: {matchData.skillScore.toFixed(2)}%
+                  </div>
+                )}
               </div>
             )}
 
