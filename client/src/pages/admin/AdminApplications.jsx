@@ -67,7 +67,8 @@ const AdminApplications = () => {
             <option value="reviewed">Reviewed</option>
             <option value="shortlisted">Shortlisted</option>
             <option value="rejected">Rejected</option>
-            <option value="hired">Hired</option>
+            <option value="accepted">Accepted</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
       </div>
@@ -139,7 +140,8 @@ const AdminApplications = () => {
                         <option value="reviewed">Reviewed</option>
                         <option value="shortlisted">Shortlisted</option>
                         <option value="rejected">Rejected</option>
-                        <option value="hired">Hired</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="archived">Archived</option>
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

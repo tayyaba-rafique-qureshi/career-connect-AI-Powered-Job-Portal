@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, AlertTriangle } from 'lucide-react'
 
 export default function Login() {
   const { login } = useAuth()
@@ -11,8 +11,33 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
+  const [showAdminDialog, setShowAdminDialog] = useState(false)
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+
+  // Check if email is admin before allowing forgot password
+  const isAdminEmail = (email) => {
+    if (!email) return false
+    const normalizedEmail = email.toLowerCase().trim()
+    const adminEmails = ['admin@careerconnect.com', 'superadmin@careerconnect.com']
+    const adminPatterns = ['admin@', '@admin']
+    
+    return adminEmails.includes(normalizedEmail) || 
+           adminPatterns.some(pattern => normalizedEmail.includes(pattern))
+  }
+
+  const handleForgotPassword = (e) => {
+    e.preventDefault()
+    
+    // Check if current email is admin
+    if (isAdminEmail(form.email)) {
+      setShowAdminDialog(true)
+      return // Do NOT redirect to forgot password page
+    }
+    
+    // If not admin, proceed to forgot password page
+    navigate('/forgot-password')
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -106,9 +131,13 @@ export default function Login() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-sm font-semibold text-gray-700">Password</label>
-              <Link to="/forgot-password" className="text-xs text-[#2557A7] hover:underline font-medium">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-xs text-[#2557A7] hover:underline font-medium focus:outline-none"
+              >
                 Forgot password?
-              </Link>
+              </button>
             </div>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -163,6 +192,31 @@ export default function Login() {
         </a>
         </div>
       </div>
+
+      {/* Admin Password Reset Dialog */}
+      {showAdminDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-center text-gray-900 mb-2">
+              Action Restricted
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              Admin password cannot be reset via this form. Please contact the system administrator.
+            </p>
+            <button
+              onClick={() => setShowAdminDialog(false)}
+              className="w-full bg-[#2557A7] text-white py-2 px-4 rounded-lg hover:bg-[#1a4480] transition-colors font-semibold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
