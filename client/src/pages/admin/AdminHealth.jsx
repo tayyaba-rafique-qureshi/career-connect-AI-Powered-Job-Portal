@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw, Cpu, HardDrive, Database, Activity, Clock, HelpCircle, AlertTriangle } from 'lucide-react'
 import AdminToast from '../../components/admin/AdminToast'
+import Breadcrumb from '../../components/admin/Breadcrumb'
+import KeyboardShortcutsHelp from '../../components/admin/KeyboardShortcutsHelp'
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts'
 import { getPlatformHealth } from '../../services/adminService'
 
 // Tooltip component for metric explanations
@@ -21,6 +24,14 @@ const AdminHealth = () => {
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(false)
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    'ctrl+r': () => {
+      fetchHealth()
+      setToast({ message: 'Health data refreshed', type: 'success' })
+    }
+  })
 
   useEffect(() => {
     fetchHealth()
@@ -105,20 +116,29 @@ const AdminHealth = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb items={[{ label: 'System Health' }]} />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp shortcuts={[
+        { keys: 'Ctrl + R', description: 'Refresh health data' },
+        { keys: '?', description: 'Show keyboard shortcuts' }
+      ]} />
+
       {toast && <AdminToast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Platform Health Monitor</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Platform Health Monitor</h2>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="w-4 h-4 text-[#2557a7] border-gray-300 rounded focus:ring-[#2557a7]"
+              className="w-4 h-4 text-[#2557a7] border-gray-300 dark:border-gray-600 rounded focus:ring-[#2557a7]"
             />
-            <span className="text-sm text-gray-700">Auto-refresh (30s)</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Auto-refresh (30s)</span>
           </label>
           <button
             onClick={fetchHealth}
@@ -135,45 +155,45 @@ const AdminHealth = () => {
         <>
           {/* System Metrics */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">System Metrics</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">System Metrics</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="bg-white dark:bg-[#1f1f1f] rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <Cpu className="h-6 w-6 text-blue-600" />
-                  <h4 className="text-sm font-medium text-gray-500">CPU Cores</h4>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">CPU Cores</h4>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{health.system.cpus}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{health.system.cpus}</p>
               </div>
 
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="bg-white dark:bg-[#1f1f1f] rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <HardDrive className="h-6 w-6 text-purple-600" />
-                  <h4 className="text-sm font-medium text-gray-500">Memory Usage</h4>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Memory Usage</h4>
                 </div>
                 <p className={`text-2xl font-bold ${getMemoryStatus(parseFloat(health.system.memoryUsagePercent))}`}>
                   {health.system.memoryUsagePercent}%
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {formatBytes(health.system.usedMemory)} / {formatBytes(health.system.totalMemory)}
                 </p>
               </div>
 
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="bg-white dark:bg-[#1f1f1f] rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <Activity className="h-6 w-6 text-green-600" />
-                  <h4 className="text-sm font-medium text-gray-500">Platform</h4>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Platform</h4>
                 </div>
-                <p className="text-lg font-bold text-gray-900">{health.system.platform}</p>
-                <p className="text-xs text-gray-500 mt-1">{health.system.arch}</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{health.system.platform}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{health.system.arch}</p>
               </div>
 
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="bg-white dark:bg-[#1f1f1f] rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <Clock className="h-6 w-6 text-orange-600" />
-                  <h4 className="text-sm font-medium text-gray-500">App Uptime</h4>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">App Uptime</h4>
                 </div>
-                <p className="text-lg font-bold text-gray-900">{formatUptime(health.process.appUptime)}</p>
-                <p className="text-xs text-gray-500 mt-1">Node {health.system.nodeVersion}</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{formatUptime(health.process.appUptime)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Node {health.system.nodeVersion}</p>
               </div>
             </div>
           </div>
