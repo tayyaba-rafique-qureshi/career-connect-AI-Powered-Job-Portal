@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import {
   LayoutDashboard,
   Users,
@@ -17,11 +18,14 @@ import {
   Star,
   Flag,
   CheckCircle,
-  Activity
+  Activity,
+  Sun,
+  Moon
 } from 'lucide-react'
 
 const AdminLayout = ({ children }) => {
   const { user, logout } = useAuth()
+  const { isDark, toggle: toggleTheme } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -49,7 +53,7 @@ const AdminLayout = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f2f1]">
+    <div className="min-h-screen bg-[#f3f2f1] dark:bg-[#1a1a1a]">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -60,7 +64,7 @@ const AdminLayout = ({ children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1E293B] transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1E293B] dark:bg-[#0f0f0f] transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -116,6 +120,13 @@ const AdminLayout = ({ children }) => {
               </div>
             </div>
             <div className="space-y-2">
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors w-full"
+              >
+                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </button>
               <Link
                 to="/"
                 className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
@@ -138,18 +149,27 @@ const AdminLayout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 h-16 flex items-center px-4 lg:px-8">
+        <header className="sticky top-0 z-30 bg-white dark:bg-[#1f1f1f] border-b border-gray-200 dark:border-gray-700 h-16 flex items-center px-4 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-gray-600 hover:text-gray-900 mr-4"
+            className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mr-4"
           >
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {navigation.find(item => item.href === location.pathname)?.name || 'Admin Panel'}
             </h2>
           </div>
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleTheme}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="w-10 h-10 rounded-full inline-flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-[#2557a7] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
         </header>
 
         {/* Page content */}
