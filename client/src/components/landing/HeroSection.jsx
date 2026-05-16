@@ -15,44 +15,44 @@ export default function HeroSection() {
   }
 
   return (
-    <section className="pt-32 pb-20 md:pt-40 md:pb-28 bg-white">
+    <section className="pt-32 pb-20 md:pt-40 md:pb-28 bg-white dark:bg-[#0f0f0f]">
       <div className="max-w-[1200px] mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-12 items-center">
 
           {/* Left */}
           <div>
             {/* AI badge */}
-            <div className="inline-flex items-center gap-2 bg-[#E6F4EE] text-[#0D7A4E] text-sm font-semibold px-4 py-1.5 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 bg-[#E6F4EE] dark:bg-green-900/30 text-[#0D7A4E] dark:text-green-400 text-sm font-semibold px-4 py-1.5 rounded-full mb-6">
               <Sparkles size={14} />
               AI-Powered Job Matching
             </div>
 
-            <h1 className="text-[40px] md:text-[52px] font-extrabold text-[#1A1A2E] leading-tight mb-4">
+            <h1 className="text-[40px] md:text-[52px] font-extrabold text-[#1A1A2E] dark:text-white leading-tight mb-4">
               Find Work That<br />
-              <span className="text-[#2557A7]">Actually Fits You</span>
+              <span className="text-[#2557A7] dark:text-[#60a5fa]">Actually Fits You</span>
             </h1>
 
-            <p className="text-lg text-[#595959] mb-8 leading-relaxed max-w-lg">
+            <p className="text-lg text-[#595959] dark:text-gray-300 mb-8 leading-relaxed max-w-lg">
               CareerConnect uses AI to match your skills with the right jobs — not just keywords. Get matched smarter, apply faster.
             </p>
 
             {/* Search bar */}
             <form onSubmit={handleSearch} className="mb-4">
-              <div className="flex flex-col md:flex-row rounded-lg border border-[#D4D2D0] overflow-hidden shadow-sm focus-within:border-[#2557A7] focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                <div className="flex items-center flex-1 px-4 bg-white">
-                  <Search size={18} className="text-gray-400 shrink-0" />
+              <div className="flex flex-col md:flex-row rounded-lg border border-[#D4D2D0] dark:border-gray-600 overflow-hidden shadow-sm focus-within:border-[#2557A7] focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900 transition-all">
+                <div className="flex items-center flex-1 px-4 bg-white dark:bg-[#1f1f1f]">
+                  <Search size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
                   <input
                     type="text" value={keyword} onChange={e => setKeyword(e.target.value)}
                     placeholder="Job title, skill, or keyword"
-                    className="w-full h-[52px] px-3 text-sm outline-none bg-transparent"
+                    className="w-full h-[52px] px-3 text-sm outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
-                <div className="flex items-center px-4 bg-white border-t md:border-t-0 md:border-l border-[#D4D2D0]">
-                  <MapPin size={18} className="text-gray-400 shrink-0" />
+                <div className="flex items-center px-4 bg-white dark:bg-[#1f1f1f] border-t md:border-t-0 md:border-l border-[#D4D2D0] dark:border-gray-600">
+                  <MapPin size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
                   <input
                     type="text" value={location} onChange={e => setLocation(e.target.value)}
                     placeholder="City or Remote"
-                    className="w-full md:w-44 h-[52px] px-3 text-sm outline-none bg-transparent"
+                    className="w-full md:w-44 h-[52px] px-3 text-sm outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
                 <button type="submit"
@@ -64,10 +64,10 @@ export default function HeroSection() {
 
             {/* Popular searches */}
             <div className="flex flex-wrap gap-2 mb-8">
-              <span className="text-xs text-[#595959] self-center">Popular:</span>
+              <span className="text-xs text-[#595959] dark:text-gray-400 self-center">Popular:</span>
               {POPULAR.map(tag => (
                 <button key={tag} type="button" onClick={() => setKeyword(tag)}
-                  className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:text-[#2557A7] text-[#595959] rounded-full transition-colors">
+                  className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-[#2557A7] dark:hover:text-[#60a5fa] text-[#595959] dark:text-gray-300 rounded-full transition-colors">
                   {tag}
                 </button>
               ))}
