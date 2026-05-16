@@ -208,8 +208,8 @@ const AdminApplications = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {application.aiScore !== undefined && application.aiScore !== null ? (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getScoreBadgeColor(application.aiScore)}`}>
-                          {application.aiScore}%
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getScoreBadgeColor(Math.round(application.aiScore * 100))}`}>
+                          {Math.round(application.aiScore * 100)}%
                         </span>
                       ) : (
                         <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>

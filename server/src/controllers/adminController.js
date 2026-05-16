@@ -652,6 +652,7 @@ const getAllApplicationsAdmin = async (req, res) => {
       page = 1,
       limit = 10,
       status,
+      search,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query
@@ -662,7 +663,7 @@ const getAllApplicationsAdmin = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 }
 
-    const applications = await Application.find(query)
+    let applications = await Application.find(query)
       .populate('applicant', 'name email avatar')
       .populate('job', 'title company location status')
       .sort(sort)
@@ -670,9 +671,48 @@ const getAllApplicationsAdmin = async (req, res) => {
       .limit(parseInt(limit))
 
     // Filter out orphaned records (job or applicant was deleted)
-    const valid = applications.filter(a => a.applicant && a.job)
+    let valid = applications.filter(a => a.applicant && a.job)
 
-    const total = await Application.countDocuments(query)
+    // Apply search filter after population (search in applicant name/email or job title/company)
+    if (search && search.trim()) {
+      const searchLower = search.toLowerCase().trim()
+      valid = valid.filter(app => {
+        const applicantName = app.applicant?.name?.toLowerCase() || ''
+        const applicantEmail = app.applicant?.email?.toLowerCase() || ''
+        const jobTitle = app.job?.title?.toLowerCase() || ''
+        const jobCompany = app.job?.company?.toLowerCase() || ''
+        
+        return applicantName.includes(searchLower) ||
+               applicantEmail.includes(searchLower) ||
+               jobTitle.includes(searchLower) ||
+               jobCompany.includes(searchLower)
+      })
+    }
+
+    // Count total valid applications (excluding orphaned records)
+    const allApplications = await Application.find(query)
+      .populate('applicant', 'name email')
+      .populate('job', 'title company')
+    
+    let totalValid = allApplications.filter(a => a.applicant && a.job)
+    
+    // Apply search to total count as well
+    if (search && search.trim()) {
+      const searchLower = search.toLowerCase().trim()
+      totalValid = totalValid.filter(app => {
+        const applicantName = app.applicant?.name?.toLowerCase() || ''
+        const applicantEmail = app.applicant?.email?.toLowerCase() || ''
+        const jobTitle = app.job?.title?.toLowerCase() || ''
+        const jobCompany = app.job?.company?.toLowerCase() || ''
+        
+        return applicantName.includes(searchLower) ||
+               applicantEmail.includes(searchLower) ||
+               jobTitle.includes(searchLower) ||
+               jobCompany.includes(searchLower)
+      })
+    }
+
+    const total = totalValid.length
 
     res.json({
       success: true,
