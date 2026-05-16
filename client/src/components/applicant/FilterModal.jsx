@@ -37,7 +37,7 @@ export default function FilterModal({ filters, onApply, onClose }) {
         onClick={onClose}
         style={{
           position: 'absolute', inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
+          backgroundColor: 'var(--cc-overlay)',
           backdropFilter: 'blur(4px)',
         }}
       />
@@ -47,8 +47,8 @@ export default function FilterModal({ filters, onApply, onClose }) {
         position: 'relative',
         width: 'min(400px, 100vw)',
         height: '100vh',
-        backgroundColor: 'white',
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+        backgroundColor: 'var(--cc-surface)',
+        boxShadow: 'var(--cc-shadow-lg)',
         display: 'flex',
         flexDirection: 'column',
         animation: 'slideInRight 0.22s ease-out',
@@ -59,9 +59,9 @@ export default function FilterModal({ filters, onApply, onClose }) {
             from { transform: translateX(100%); opacity: 0; }
             to   { transform: translateX(0);    opacity: 1; }
           }
-          .filter-checkbox:checked { accent-color: #2557A7; }
-          .filter-radio:checked    { accent-color: #2557A7; }
-          input[type=range] { accent-color: #2557A7; }
+          .filter-checkbox:checked { accent-color: var(--cc-blue); }
+          .filter-radio:checked    { accent-color: var(--cc-blue); }
+          input[type=range] { accent-color: var(--cc-blue); }
 
           @media (max-width: 768px) {
             /* Ensure the drawer never causes horizontal overflow */
@@ -73,13 +73,13 @@ export default function FilterModal({ filters, onApply, onClose }) {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '20px 24px 16px',
-          borderBottom: '1px solid #E4E2E0',
+          borderBottom: '1px solid var(--cc-border)',
           flexShrink: 0,
         }}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#2D2D2D', margin: 0 }}>Filters</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--cc-text-1)', margin: 0 }}>Filters</h2>
             {activeCount > 0 && (
-              <p style={{ fontSize: '13px', color: '#2557A7', margin: '2px 0 0', fontWeight: '500' }}>
+              <p style={{ fontSize: '13px', color: 'var(--cc-blue)', margin: '2px 0 0', fontWeight: '500' }}>
                 {activeCount} filter{activeCount !== 1 ? 's' : ''} active
               </p>
             )}
@@ -87,10 +87,10 @@ export default function FilterModal({ filters, onApply, onClose }) {
           <button onClick={onClose} style={{
             width: '40px', height: '40px', borderRadius: '50%', border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', backgroundColor: 'transparent', color: '#595959',
+            cursor: 'pointer', backgroundColor: 'transparent', color: 'var(--cc-text-2)',
             transition: 'background 0.15s',
           }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F0F0F0'}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--cc-surface-2)'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <X size={20} />
@@ -165,8 +165,8 @@ export default function FilterModal({ filters, onApply, onClose }) {
           {/* Salary */}
           <FilterSection label="Salary range" noBorder>
             <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', color: '#595959' }}>Rs 0</span>
-              <span style={{ fontSize: '13px', color: '#2557A7', fontWeight: '600' }}>
+              <span style={{ fontSize: '13px', color: 'var(--cc-text-2)' }}>Rs 0</span>
+              <span style={{ fontSize: '13px', color: 'var(--cc-blue)', fontWeight: '600' }}>
                 Rs {local.salaryMax.toLocaleString()}{local.salaryMax >= 500000 ? '+' : ''}
               </span>
             </div>
@@ -177,8 +177,8 @@ export default function FilterModal({ filters, onApply, onClose }) {
               style={{ width: '100%', cursor: 'pointer' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#767676' }}>Any salary</span>
-              <span style={{ fontSize: '12px', color: '#767676' }}>Rs 5,00,000+</span>
+              <span style={{ fontSize: '12px', color: 'var(--cc-text-3)' }}>Any salary</span>
+              <span style={{ fontSize: '12px', color: 'var(--cc-text-3)' }}>Rs 5,00,000+</span>
             </div>
           </FilterSection>
         </div>
@@ -186,34 +186,34 @@ export default function FilterModal({ filters, onApply, onClose }) {
         {/* ── Sticky Footer ── */}
         <div style={{
           padding: '16px 24px',
-          borderTop: '1px solid #E4E2E0',
-          backgroundColor: 'white',
+          borderTop: '1px solid var(--cc-border)',
+          backgroundColor: 'var(--cc-surface)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexShrink: 0,
         }}>
           <button onClick={clear} style={{
-            fontSize: '14px', color: '#595959', background: 'none',
+            fontSize: '14px', color: 'var(--cc-text-2)', background: 'none',
             border: 'none', cursor: 'pointer', fontWeight: '500',
             fontFamily: 'inherit', padding: '8px 0',
             transition: 'color 0.15s',
           }}
-            onMouseEnter={e => e.currentTarget.style.color = '#2D2D2D'}
-            onMouseLeave={e => e.currentTarget.style.color = '#595959'}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--cc-text-1)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--cc-text-2)'}
           >
             Clear all
           </button>
           <button onClick={() => { onApply(local); onClose() }} style={{
             padding: '0 28px', height: '44px',
-            backgroundColor: '#2557A7', color: 'white',
+            backgroundColor: 'var(--cc-blue)', color: 'var(--cc-text-4)',
             border: 'none', borderRadius: '6px',
             fontSize: '14px', fontWeight: '600',
             cursor: 'pointer', fontFamily: 'inherit',
             transition: 'background 0.15s',
           }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1D4589'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2557A7'}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--cc-blue-hover)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--cc-blue)'}
           >
             Apply{activeCount > 0 ? ` (${activeCount})` : ''}
           </button>
@@ -226,8 +226,8 @@ export default function FilterModal({ filters, onApply, onClose }) {
 /* ── Helper sub-components ── */
 function FilterSection({ label, children, noBorder }) {
   return (
-    <div style={{ marginBottom: noBorder ? 0 : '24px', paddingBottom: noBorder ? 0 : '24px', borderBottom: noBorder ? 'none' : '1px solid #F0F0F0' }}>
-      <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#2D2D2D', margin: '0 0 12px' }}>{label}</h3>
+    <div style={{ marginBottom: noBorder ? 0 : '24px', paddingBottom: noBorder ? 0 : '24px', borderBottom: noBorder ? 'none' : '1px solid var(--cc-border)' }}>
+      <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '0 0 12px' }}>{label}</h3>
       {children}
     </div>
   )
@@ -241,9 +241,9 @@ function CheckRow({ checked, onChange, label }) {
         checked={checked}
         onChange={onChange}
         className="filter-checkbox"
-        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#2557A7', flexShrink: 0 }}
+        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--cc-blue)', flexShrink: 0 }}
       />
-      <span style={{ fontSize: '14px', color: '#2D2D2D' }}>{label}</span>
+      <span style={{ fontSize: '14px', color: 'var(--cc-text-1)' }}>{label}</span>
     </label>
   )
 }
@@ -258,9 +258,9 @@ function RadioRow({ name, value, checked, onChange, label }) {
         checked={checked}
         onChange={onChange}
         className="filter-radio"
-        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#2557A7', flexShrink: 0 }}
+        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--cc-blue)', flexShrink: 0 }}
       />
-      <span style={{ fontSize: '14px', color: '#2D2D2D' }}>{label}</span>
+      <span style={{ fontSize: '14px', color: 'var(--cc-text-1)' }}>{label}</span>
     </label>
   )
 }

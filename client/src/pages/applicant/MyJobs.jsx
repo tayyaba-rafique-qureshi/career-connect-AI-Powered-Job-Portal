@@ -16,66 +16,66 @@ const TABS = [
 /* ── SVG Illustrations ── */
 const SavedSVG = () => (
   <svg width="200" height="160" viewBox="0 0 200 160" fill="none">
-    <ellipse cx="100" cy="140" rx="70" ry="10" fill="#EDF3FC" />
-    <rect x="50" y="20" width="100" height="110" rx="8" fill="#C5D8FA" />
-    <rect x="58" y="30" width="84" height="90" rx="6" fill="white" />
-    <rect x="66" y="44" width="60" height="8" rx="4" fill="#2557A7" opacity="0.7" />
-    <rect x="66" y="58" width="45" height="6" rx="3" fill="#A0B8E8" />
-    <rect x="66" y="70" width="52" height="6" rx="3" fill="#A0B8E8" />
+    <ellipse cx="100" cy="140" rx="70" ry="10" fill="var(--cc-blue-light)" />
+    <rect x="50" y="20" width="100" height="110" rx="8" fill="var(--cc-blue-border)" />
+    <rect x="58" y="30" width="84" height="90" rx="6" fill="var(--cc-surface)" />
+    <rect x="66" y="44" width="60" height="8" rx="4" fill="var(--cc-blue)" opacity="0.7" />
+    <rect x="66" y="58" width="45" height="6" rx="3" fill="var(--cc-blue-border)" />
+    <rect x="66" y="70" width="52" height="6" rx="3" fill="var(--cc-blue-border)" />
     <path d="M130 95 L137 108 L150 110 L140 120 L142 133 L130 126 L118 133 L120 120 L110 110 L123 108 Z" fill="#F5A623" />
   </svg>
 )
 
 const AppliedSVG = () => (
   <svg width="200" height="160" viewBox="0 0 200 160" fill="none">
-    <ellipse cx="100" cy="145" rx="65" ry="9" fill="#EDF3FC" />
-    <rect x="45" y="30" width="75" height="100" rx="6" fill="#E8F0FE" />
+    <ellipse cx="100" cy="145" rx="65" ry="9" fill="var(--cc-blue-light)" />
+    <rect x="45" y="30" width="75" height="100" rx="6" fill="var(--cc-blue-light)" />
     <rect x="52" y="38" width="61" height="84" rx="4" fill="white" />
-    <rect x="60" y="48" width="45" height="6" rx="3" fill="#2557A7" opacity="0.6" />
-    <rect x="60" y="60" width="35" height="5" rx="2.5" fill="#A0B8E8" />
-    <rect x="60" y="71" width="40" height="5" rx="2.5" fill="#A0B8E8" />
-    <rect x="60" y="82" width="30" height="5" rx="2.5" fill="#A0B8E8" />
+    <rect x="60" y="48" width="45" height="6" rx="3" fill="var(--cc-blue)" opacity="0.6" />
+    <rect x="60" y="60" width="35" height="5" rx="2.5" fill="var(--cc-blue-border)" />
+    <rect x="60" y="71" width="40" height="5" rx="2.5" fill="var(--cc-blue-border)" />
+    <rect x="60" y="82" width="30" height="5" rx="2.5" fill="var(--cc-blue-border)" />
     {/* Paper airplane */}
     <g transform="rotate(-30,130,80)">
-      <path d="M110 80 L155 65 L120 90 Z" fill="#2557A7" />
-      <path d="M110 80 L155 65 L130 110 Z" fill="#4A90D9" />
-      <path d="M120 90 L130 110 L118 95 Z" fill="#1A4589" />
+      <path d="M110 80 L155 65 L120 90 Z" fill="var(--cc-blue)" />
+      <path d="M110 80 L155 65 L130 110 Z" fill="var(--cc-blue-hover)" />
+      <path d="M120 90 L130 110 L118 95 Z" fill="var(--cc-blue-hover)" />
     </g>
   </svg>
 )
 
 const InterviewSVG = () => (
   <svg width="200" height="160" viewBox="0 0 200 160" fill="none">
-    <ellipse cx="100" cy="145" rx="65" ry="9" fill="#EDF3FC" />
-    <rect x="40" y="25" width="120" height="100" rx="8" fill="#C5D8FA" />
-    <rect x="40" y="40" width="120" height="85" rx="0" fill="white" />
-    <rect x="40" y="40" width="120" height="85" rx="0" fill="white" />
+    <ellipse cx="100" cy="145" rx="65" ry="9" fill="var(--cc-blue-light)" />
+    <rect x="40" y="25" width="120" height="100" rx="8" fill="var(--cc-blue-border)" />
+    <rect x="40" y="40" width="120" height="85" rx="0" fill="var(--cc-surface)" />
+    <rect x="40" y="40" width="120" height="85" rx="0" fill="var(--cc-surface)" />
     {/* Calendar grid */}
     {[0,1,2,3,4,5].map(col => [0,1,2,3].map(row => (
       <rect key={`${col}-${row}`}
         x={52 + col * 17} y={55 + row * 17}
         width="12" height="12" rx="2"
-        fill={col === 2 && row === 1 ? '#2557A7' : '#EDF3FC'}
+        fill={col === 2 && row === 1 ? 'var(--cc-blue)' : 'var(--cc-blue-light)'}
       />
     )))}
     {/* Calendar rings */}
-    <rect x="62" y="22" width="8" height="16" rx="4" fill="#2557A7" />
-    <rect x="130" y="22" width="8" height="16" rx="4" fill="#2557A7" />
-    <circle cx="150" cy="120" r="22" fill="#E7F5E8" />
-    <path d="M142 120l5 5 11-11" stroke="#137333" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="62" y="22" width="8" height="16" rx="4" fill="var(--cc-blue)" />
+    <rect x="130" y="22" width="8" height="16" rx="4" fill="var(--cc-blue)" />
+    <circle cx="150" cy="120" r="22" fill="var(--cc-green-bg)" />
+    <path d="M142 120l5 5 11-11" stroke="var(--cc-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 
 const ArchivedSVG = () => (
   <svg width="200" height="160" viewBox="0 0 200 160" fill="none">
-    <ellipse cx="100" cy="145" rx="65" ry="9" fill="#EDF3FC" />
-    <rect x="45" y="60" width="110" height="75" rx="6" fill="#C5D8FA" />
+    <ellipse cx="100" cy="145" rx="65" ry="9" fill="var(--cc-blue-light)" />
+    <rect x="45" y="60" width="110" height="75" rx="6" fill="var(--cc-blue-border)" />
     <rect x="50" y="68" width="100" height="67" rx="4" fill="white" />
-    <rect x="70" y="45" width="60" height="20" rx="4" fill="#2557A7" />
-    <rect x="60" y="52" width="80" height="15" rx="4" fill="#4A90D9" />
-    <rect x="65" y="82" width="70" height="6" rx="3" fill="#EDF3FC" />
-    <rect x="65" y="94" width="55" height="6" rx="3" fill="#EDF3FC" />
-    <rect x="65" y="106" width="62" height="6" rx="3" fill="#EDF3FC" />
+    <rect x="70" y="45" width="60" height="20" rx="4" fill="var(--cc-blue)" />
+    <rect x="60" y="52" width="80" height="15" rx="4" fill="var(--cc-blue-hover)" />
+    <rect x="65" y="82" width="70" height="6" rx="3" fill="var(--cc-blue-light)" />
+    <rect x="65" y="94" width="55" height="6" rx="3" fill="var(--cc-blue-light)" />
+    <rect x="65" y="106" width="62" height="6" rx="3" fill="var(--cc-blue-light)" />
   </svg>
 )
 
@@ -88,15 +88,15 @@ function EmptyState({ illustration: Illustration, title, subtitle, cta = 'Find j
       padding: '48px 24px', textAlign: 'center',
     }}>
       <Illustration />
-      <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#2D2D2D', margin: '24px 0 8px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '24px 0 8px' }}>
         {title}
       </h2>
-      <p style={{ fontSize: '14px', color: '#767676', margin: '0 0 4px', maxWidth: '320px', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '14px', color: 'var(--cc-text-3)', margin: '0 0 4px', maxWidth: '320px', lineHeight: 1.5 }}>
         {subtitle}
       </p>
       {extra && (
         <button style={{
-          fontSize: '13px', color: '#2557A7', background: 'none',
+          fontSize: '13px', color: 'var(--cc-blue)', background: 'none',
           border: 'none', cursor: 'pointer', fontFamily: 'inherit',
           marginBottom: '16px', textDecoration: 'underline', padding: 0,
         }}>
@@ -111,7 +111,7 @@ function EmptyState({ illustration: Illustration, title, subtitle, cta = 'Find j
           display: 'inline-flex', alignItems: 'center', gap: '8px',
           marginTop: extra ? '8px' : '24px',
           padding: '0 24px', height: '44px',
-          backgroundColor: hov ? '#1D4589' : '#2557A7',
+          backgroundColor: hov ? 'var(--cc-blue-hover)' : 'var(--cc-blue)',
           color: 'white', borderRadius: '6px',
           fontSize: '14px', fontWeight: '600',
           textDecoration: 'none', transition: 'background 0.15s',
@@ -174,18 +174,18 @@ export default function MyJobs() {
   return (
     <div className="myjobs-root" style={{
       minHeight: '100vh',
-      background: 'linear-gradient(160deg, #EDF3FC 0%, #F7F9FC 50%, #FFFFFF 100%)',
+      background: 'var(--cc-bg-gradient)',
       fontFamily: '"Noto Sans", "Helvetica Neue", Arial, sans-serif',
     }}>
       <Navbar />
 
       <div className="myjobs-container" style={{ paddingTop: '60px', maxWidth: '900px', margin: '0 auto', padding: '60px 40px 0' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#2D2D2D', margin: '32px 0 24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--cc-text-1)', margin: '32px 0 24px' }}>
           My jobs
         </h1>
 
         {/* ── Tabs ── */}
-        <div className="myjobs-tabs" style={{ borderBottom: '1px solid #E4E2E0', display: 'flex', marginBottom: '0' }}>
+        <div className="myjobs-tabs" style={{ borderBottom: '1px solid var(--cc-border)', display: 'flex', marginBottom: '0' }}>
           {TABS.map(tab => {
             const active = activeTab === tab.key
             const count  = counts[tab.key]
@@ -198,21 +198,21 @@ export default function MyJobs() {
                   display: 'flex', alignItems: 'center', gap: '6px',
                   padding: '16px 24px', fontSize: '15px',
                   fontWeight: active ? '600' : '400',
-                  color: active ? '#2557A7' : '#595959',
+                  color: active ? 'var(--cc-blue)' : 'var(--cc-text-2)',
                   background: 'none', border: 'none',
-                  borderBottom: active ? '3px solid #2557A7' : '3px solid transparent',
+                  borderBottom: active ? '3px solid var(--cc-blue)' : '3px solid transparent',
                   marginBottom: '-1px', cursor: 'pointer',
                   transition: 'all 0.15s', fontFamily: 'inherit',
                   whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = '#F7F7F7' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = 'var(--cc-surface-2)' }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent' }}
               >
                 {tab.label}
                 {count > 0 && (
                   <span style={{
                     fontSize: '13px',
-                    color: active ? '#2557A7' : '#767676',
+                    color: active ? 'var(--cc-blue)' : 'var(--cc-text-3)',
                     fontWeight: active ? '700' : '400',
                   }}>
                     ({count})
@@ -225,20 +225,20 @@ export default function MyJobs() {
 
         {/* ── Content card ── */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--cc-surface)',
           borderRadius: '0 0 8px 8px',
-          border: '1px solid #E4E2E0',
+          border: '1px solid var(--cc-border)',
           borderTop: 'none',
           overflow: 'hidden',
           marginBottom: '40px',
         }}>
           {loading ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: '#767676', fontSize: '14px' }}>
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--cc-text-3)', fontSize: '14px' }}>
               <div style={{ display: 'inline-flex', gap: '8px' }}>
                 {[0,1,2].map(i => (
                   <div key={i} style={{
                     width: '8px', height: '8px', borderRadius: '50%',
-                    backgroundColor: '#2557A7', opacity: 0.7,
+                    backgroundColor: 'var(--cc-blue)', opacity: 0.7,
                     animation: `bounce 0.9s ${i * 0.15}s infinite`,
                   }} />
                 ))}
@@ -265,8 +265,8 @@ export default function MyJobs() {
                           <SavedJobRow key={s._id} job={job} savedAt={s.createdAt} isApplied={isApplied} />
                         )
                       })}
-                      <p style={{ textAlign: 'center', padding: '12px', fontSize: '13px', borderTop: '1px solid #E4E2E0' }}>
-                        <a href="#" style={{ color: '#2557A7', textDecoration: 'none' }}
+                      <p style={{ textAlign: 'center', padding: '12px', fontSize: '13px', borderTop: '1px solid var(--cc-border)' }}>
+                        <a href="#" style={{ color: 'var(--cc-blue)', textDecoration: 'none' }}
                           onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
                           onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
                         >Not seeing a job?</a>
@@ -329,18 +329,18 @@ function SavedJobRow({ job, savedAt, isApplied }) {
       style={{
         display: 'flex', alignItems: 'center', gap: '16px',
         padding: '20px 24px',
-        borderBottom: '1px solid #E4E2E0',
-        backgroundColor: hov ? '#FAFAFA' : 'white',
+        borderBottom: '1px solid var(--cc-border)',
+        backgroundColor: hov ? 'var(--cc-surface-2)' : 'var(--cc-surface)',
         transition: 'background 0.12s',
       }}
     >
       {/* Company logo placeholder */}
       <div style={{
         width: '48px', height: '48px', borderRadius: '8px',
-        border: '1px solid #E4E2E0',
-        backgroundColor: '#EDF3FC',
+        border: '1px solid var(--cc-border)',
+        backgroundColor: 'var(--cc-blue-light)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '14px', fontWeight: '700', color: '#2557A7',
+        fontSize: '14px', fontWeight: '700', color: 'var(--cc-blue)',
         flexShrink: 0,
       }}>
         {(job.company || 'C').slice(0, 2).toUpperCase()}
@@ -348,13 +348,13 @@ function SavedJobRow({ job, savedAt, isApplied }) {
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#2D2D2D', margin: '0 0 2px' }}>{job.title}</h3>
-        <p style={{ fontSize: '14px', color: '#595959', margin: '0 0 2px' }}>{job.company}</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: '#767676' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '0 0 2px' }}>{job.title}</h3>
+        <p style={{ fontSize: '14px', color: 'var(--cc-text-2)', margin: '0 0 2px' }}>{job.company}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'var(--cc-text-3)' }}>
           <MapPin size={12} />
           <span>{job.location}</span>
         </div>
-        <p style={{ fontSize: '12px', color: '#767676', margin: '4px 0 0' }}>
+        <p style={{ fontSize: '12px', color: 'var(--cc-text-3)', margin: '4px 0 0' }}>
           Saved on {new Date(savedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
@@ -366,14 +366,14 @@ function SavedJobRow({ job, savedAt, isApplied }) {
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',
               padding: '0 16px', height: '40px',
-              backgroundColor: '#E7F5E8', color: '#137333',
+              backgroundColor: 'var(--cc-green-bg)', color: 'var(--cc-green)',
               borderRadius: '6px', fontSize: '14px', fontWeight: '600',
-              border: '1px solid #A8D5AD',
+              border: '1px solid var(--cc-green-border)',
             }}>
               ✓ Applied
             </span>
             <Link to="/my-jobs?tab=applied" style={{
-              fontSize: '13px', color: '#2557A7', textDecoration: 'none', fontWeight: '500',
+              fontSize: '13px', color: 'var(--cc-blue)', textDecoration: 'none', fontWeight: '500',
               whiteSpace: 'nowrap',
             }}
               onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
@@ -386,29 +386,29 @@ function SavedJobRow({ job, savedAt, isApplied }) {
           <Link to={`/dashboard/applicant?job=${job._id}`} style={{
             display: 'inline-flex', alignItems: 'center',
             padding: '0 20px', height: '40px',
-            backgroundColor: '#2557A7', color: 'white',
+            backgroundColor: 'var(--cc-blue)', color: 'white',
             borderRadius: '6px', fontSize: '14px', fontWeight: '600',
             textDecoration: 'none', transition: 'background 0.15s',
           }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1D4589'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2557A7'}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--cc-blue-hover)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--cc-blue)'}
           >
             Apply now
           </Link>
         )}
         <button style={{
           width: '36px', height: '36px', borderRadius: '50%',
-          border: '1px solid #E4E2E0', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', cursor: 'pointer', backgroundColor: 'white',
-          color: '#595959',
+          border: '1px solid var(--cc-border)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--cc-surface)',
+          color: 'var(--cc-blue)',
         }}>
-          <Bookmark size={16} fill="#2557A7" color="#2557A7" />
+          <Bookmark size={16} fill="var(--cc-blue)" color="var(--cc-blue)" />
         </button>
         <button style={{
           width: '36px', height: '36px', borderRadius: '50%',
-          border: '1px solid #E4E2E0', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', cursor: 'pointer', backgroundColor: 'white',
-          color: '#595959',
+          border: '1px solid var(--cc-border)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--cc-surface)',
+          color: 'var(--cc-text-2)',
         }}>
           <MoreHorizontal size={16} />
         </button>
@@ -429,18 +429,18 @@ function InterviewEmpty() {
         cta="Find jobs"
       />
       {/* Interview services card */}
-      <div style={{ margin: '0 24px 32px', border: '1px solid #E4E2E0', borderRadius: '8px', padding: '20px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D2D2D', margin: '0 0 16px' }}>Interview services</h3>
+      <div style={{ margin: '0 24px 32px', border: '1px solid var(--cc-border)', borderRadius: '8px', padding: '20px', backgroundColor: 'var(--cc-surface)' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '0 0 16px' }}>Interview services</h3>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px', border: '1px solid #E4E2E0', borderRadius: '8px',
-          backgroundColor: '#FAFAFA',
+          padding: '16px', border: '1px solid var(--cc-border)', borderRadius: '8px',
+          backgroundColor: 'var(--cc-surface-2)',
         }}>
           <div>
-            <p style={{ fontSize: '14px', fontWeight: '600', color: '#2D2D2D', margin: '0 0 4px' }}>Setup device for interview</p>
-            <p style={{ fontSize: '13px', color: '#767676', margin: '0 0 8px' }}>Test your camera and microphone ahead of time.</p>
+            <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '0 0 4px' }}>Setup device for interview</p>
+            <p style={{ fontSize: '13px', color: 'var(--cc-text-3)', margin: '0 0 8px' }}>Test your camera and microphone ahead of time.</p>
             <a href="#" style={{
-              fontSize: '14px', color: '#2557A7', fontWeight: '600',
+              fontSize: '14px', color: 'var(--cc-blue)', fontWeight: '600',
               textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px',
             }}
               onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
@@ -450,10 +450,10 @@ function InterviewEmpty() {
             </a>
           </div>
           <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ flexShrink: 0 }}>
-            <rect x="18" y="10" width="28" height="44" rx="6" fill="#C5D8FA" />
-            <rect x="22" y="16" width="20" height="30" rx="2" fill="white" />
-            <circle cx="32" cy="50" r="3" fill="#2557A7" />
-            <circle cx="38" cy="28" r="8" fill="#2557A7" opacity="0.8" />
+            <rect x="18" y="10" width="28" height="44" rx="6" fill="var(--cc-blue-border)" />
+            <rect x="22" y="16" width="20" height="30" rx="2" fill="var(--cc-surface)" />
+            <circle cx="32" cy="50" r="3" fill="var(--cc-blue)" />
+            <circle cx="38" cy="28" r="8" fill="var(--cc-blue)" opacity="0.8" />
             <path d="M35 28l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
