@@ -96,27 +96,43 @@ exports.saveStep = async (req, res) => {
           // Extract text via Python AI service
           const rawText = await extractResumeText(fileId)
           if (!rawText || !rawText.trim()) {
-            await deleteOldResume(fileId)
-            return res.status(400).json({ message: 'Resume text extraction failed. Please upload a text-based PDF.' })
-          }
-
-          p.resume = {
-            fileId,
-            fileName:         filename,
-            uploadedAt:       new Date(),
-            rawText,                   // active text — starts as the uploaded PDF text
-            uploadedRawText:  rawText, // preserved copy, never overwritten
-            aiPreference:     'uploaded', // default: uploaded PDF powers AI
-            originalSize,
-            storedSize:       compressedSize,
-            wasCompressed:    compressed
+            console.warn('[Onboarding] Resume text extraction failed - AI service may be unavailable')
+            // Allow onboarding to complete without text extraction
+            // Text can be extracted later when AI service is available
+            p.resume = {
+              fileId,
+              fileName:         filename,
+              uploadedAt:       new Date(),
+              rawText:          '', // Empty but allowed - can be populated later
+              uploadedRawText:  '',
+              aiPreference:     'uploaded',
+              originalSize,
+              storedSize:       compressedSize,
+              wasCompressed:    compressed
+            }
+          } else {
+            p.resume = {
+              fileId,
+              fileName:         filename,
+              uploadedAt:       new Date(),
+              rawText,
+              uploadedRawText:  rawText,
+              aiPreference:     'uploaded',
+              originalSize,
+              storedSize:       compressedSize,
+              wasCompressed:    compressed
+            }
           }
         } else if (isOnboarding && hasExistingResume && !p.resume?.rawText?.trim()) {
+          // Try to extract text from existing resume
           const rawText = await extractResumeText(p.resume.fileId)
           if (!rawText || !rawText.trim()) {
-            return res.status(400).json({ message: 'Resume text extraction failed. Please upload a text-based PDF.' })
+            console.warn('[Onboarding] Could not extract text from existing resume - AI service may be unavailable')
+            // Allow onboarding to complete - text can be extracted later
+            p.resume = { ...p.resume, rawText: '', uploadedRawText: '' }
+          } else {
+            p.resume = { ...p.resume, rawText, uploadedRawText: rawText }
           }
-          p.resume = { ...p.resume, rawText }
         }
 
         // Save other step 5 fields
