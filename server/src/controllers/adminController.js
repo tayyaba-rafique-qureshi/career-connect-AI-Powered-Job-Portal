@@ -474,6 +474,7 @@ const getAllJobsAdmin = async (req, res) => {
       status,
       workMode,
       experienceLevel,
+      isFeatured,
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc'
@@ -483,6 +484,9 @@ const getAllJobsAdmin = async (req, res) => {
     if (status) query.status = status
     if (workMode) query.workMode = workMode
     if (experienceLevel) query.experienceLevel = experienceLevel
+    if (isFeatured !== undefined && isFeatured !== '') {
+      query.isFeatured = isFeatured === 'true'
+    }
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
