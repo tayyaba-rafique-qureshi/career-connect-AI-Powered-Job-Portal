@@ -7,7 +7,7 @@ export default function FileUpload({ file, onChange, error }) {
   const handleFile = (f) => {
     if (!f) return
     if (f.type !== 'application/pdf') return alert('Only PDF files are allowed')
-    if (f.size > 5 * 1024 * 1024) return alert('File must be under 5MB')
+    if (f.size > 2 * 1024 * 1024) return alert('File must be under 2MB')
     onChange(f)
   }
 
@@ -33,7 +33,7 @@ export default function FileUpload({ file, onChange, error }) {
         >
           <div className="text-4xl mb-3">📄</div>
           <p className="text-sm font-semibold text-gray-700">Drag & drop your resume here</p>
-          <p className="text-xs text-gray-400 mt-1">PDF only · Max 5MB</p>
+          <p className="text-xs text-gray-400 mt-1">PDF only · Max 2MB</p>
           <button type="button" className="mt-4 text-indeed-blue text-sm font-medium hover:underline">
             Browse files
           </button>

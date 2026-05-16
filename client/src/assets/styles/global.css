@@ -2,84 +2,403 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CareerConnect — Design Tokens
+   All inline-styled components reference these via var(--cc-*).
+   The [data-theme="dark"] block below overrides every token for dark mode.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
+:root {
+  /* Backgrounds */
+  --cc-bg:           #F7F9FC;
+  --cc-bg-gradient:  linear-gradient(160deg, #EDF3FC 0%, #E4EEF9 25%, #EEF3FA 55%, #F7F9FC 80%, #FFFFFF 100%);
+  --cc-surface:      #FFFFFF;
+  --cc-surface-2:    #F7F9FC;
+  --cc-surface-3:    #F0F5FF;
 
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f0f2f5;
-  color: #333;
+  /* Borders */
+  --cc-border:       #E4E2E0;
+  --cc-border-2:     #D4D2D0;
+
+  /* Text */
+  --cc-text-1:       #1A1A2E;
+  --cc-text-2:       #595959;
+  --cc-text-3:       #767676;
+  --cc-text-4:       #2D2D2D;
+
+  /* Brand */
+  --cc-blue:         #2557A7;
+  --cc-blue-hover:   #1D4589;
+  --cc-blue-light:   #EDF3FC;
+  --cc-blue-border:  #C5D8FA;
+
+  /* Status */
+  --cc-green:        #137333;
+  --cc-green-bg:     #E7F5E8;
+  --cc-green-border: #A8D5AD;
+  --cc-red:          #D93025;
+  --cc-red-bg:       #FEECEA;
+  --cc-amber:        #B45309;
+  --cc-amber-bg:     #FFF4E0;
+
+  /* Shadows */
+  --cc-shadow:       0 1px 6px rgba(0,0,0,0.06);
+  --cc-shadow-md:    0 2px 12px rgba(0,0,0,0.08);
+  --cc-shadow-lg:    0 8px 32px rgba(0,0,0,0.10);
+
+  /* Input */
+  --cc-input-bg:     #FFFFFF;
+  --cc-input-border: #D1D5DB;
+
+  /* Modal overlay */
+  --cc-overlay:      rgba(0,0,0,0.45);
+
+  /* Scrollbar */
+  --cc-scrollbar:    #D4D2D0;
 }
 
-/* Auth pages */
+/* ── Dark mode token overrides ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --cc-bg:           #0F172A;
+  --cc-bg-gradient:  linear-gradient(160deg, #0F172A 0%, #111827 40%, #0F172A 100%);
+  --cc-surface:      #1E293B;
+  --cc-surface-2:    #293548;
+  --cc-surface-3:    #1E3A5F;
+
+  --cc-border:       #334155;
+  --cc-border-2:     #475569;
+
+  --cc-text-1:       #F1F5F9;
+  --cc-text-2:       #CBD5E1;
+  --cc-text-3:       #94A3B8;
+  --cc-text-4:       #E2E8F0;
+
+  --cc-blue:         #60A5FA;
+  --cc-blue-hover:   #93C5FD;
+  --cc-blue-light:   #1E3A5F;
+  --cc-blue-border:  #2D5A8E;
+
+  --cc-green:        #4ADE80;
+  --cc-green-bg:     #14532D;
+  --cc-green-border: #166534;
+  --cc-red:          #F87171;
+  --cc-red-bg:       #450A0A;
+  --cc-amber:        #FCD34D;
+  --cc-amber-bg:     #451A03;
+
+  --cc-shadow:       0 1px 6px rgba(0,0,0,0.4);
+  --cc-shadow-md:    0 2px 12px rgba(0,0,0,0.5);
+  --cc-shadow-lg:    0 8px 32px rgba(0,0,0,0.6);
+
+  --cc-input-bg:     #1E293B;
+  --cc-input-border: #475569;
+
+  --cc-overlay:      rgba(0,0,0,0.7);
+
+  --cc-scrollbar:    #475569;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Global base — applies to everything
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body {
+  font-family: '"Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif';
+  background: var(--cc-bg);
+  color: var(--cc-text-1);
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--cc-scrollbar); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cc-border-2); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tailwind class overrides for dark mode
+   (Navbar, auth pages, admin pages use Tailwind classes)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-\[\#FFFFFF\]       { background-color: var(--cc-surface)   !important; }
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-\[\#F7F9FC\],
+[data-theme="dark"] .bg-\[\#F9FAFB\],
+[data-theme="dark"] .bg-\[\#FAFAFA\]       { background-color: var(--cc-surface-2) !important; }
+[data-theme="dark"] .bg-\[\#EFF6FF\],
+[data-theme="dark"] .bg-\[\#EDF3FC\],
+[data-theme="dark"] .bg-blue-50            { background-color: var(--cc-blue-light) !important; }
+[data-theme="dark"] .bg-green-50           { background-color: var(--cc-green-bg)  !important; }
+[data-theme="dark"] .bg-red-50             { background-color: var(--cc-red-bg)    !important; }
+
+[data-theme="dark"] .border-\[\#E4E2E0\],
+[data-theme="dark"] .border-\[\#D4D2D0\],
+[data-theme="dark"] .border-\[\#E5E7EB\],
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-b,
+[data-theme="dark"] .border-t,
+[data-theme="dark"] .border               { border-color: var(--cc-border)         !important; }
+[data-theme="dark"] .border-green-200      { border-color: var(--cc-green-border)  !important; }
+[data-theme="dark"] .border-\[\#BFDBFE\],
+[data-theme="dark"] .border-\[\#C5D8FA\]   { border-color: var(--cc-blue-border)   !important; }
+
+[data-theme="dark"] .text-\[\#1A1A2E\],
+[data-theme="dark"] .text-\[\#2D2D2D\],
+[data-theme="dark"] .text-\[\#111827\],
+[data-theme="dark"] .text-\[\#1F2937\],
+[data-theme="dark"] .text-gray-900         { color: var(--cc-text-1)               !important; }
+[data-theme="dark"] .text-\[\#595959\],
+[data-theme="dark"] .text-\[\#374151\],
+[data-theme="dark"] .text-\[\#4B5563\],
+[data-theme="dark"] .text-gray-700         { color: var(--cc-text-2)               !important; }
+[data-theme="dark"] .text-\[\#767676\],
+[data-theme="dark"] .text-\[\#6B7280\],
+[data-theme="dark"] .text-\[\#9CA3AF\],
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-400         { color: var(--cc-text-3)               !important; }
+[data-theme="dark"] .text-\[\#2557A7\],
+[data-theme="dark"] .text-\[\#1D4ED8\],
+[data-theme="dark"] .text-blue-600         { color: var(--cc-blue)                 !important; }
+[data-theme="dark"] .text-\[\#137333\],
+[data-theme="dark"] .text-green-700        { color: var(--cc-green)                !important; }
+
+[data-theme="dark"] .hover\:bg-gray-100:hover,
+[data-theme="dark"] .hover\:bg-gray-50:hover,
+[data-theme="dark"] .hover\:bg-\[\#F7F9FC\]:hover,
+[data-theme="dark"] .hover\:bg-\[\#F9FAFB\]:hover { background-color: var(--cc-surface-2) !important; }
+
+[data-theme="dark"] .shadow-\[0_1px_4px_rgba\(0\,0\,0\,0\.08\)\],
+[data-theme="dark"] .shadow-md,
+[data-theme="dark"] .shadow               { box-shadow: var(--cc-shadow-md)        !important; }
+[data-theme="dark"] .shadow-xl,
+[data-theme="dark"] .shadow-2xl           { box-shadow: var(--cc-shadow-lg)        !important; }
+
+/* Inputs & textareas */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--cc-input-bg)    !important;
+  border-color:     var(--cc-input-border) !important;
+  color:            var(--cc-text-1)      !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: var(--cc-text-3) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Inline-styled component overrides
+   These target the specific hardcoded colors used in JSX style={{}} props.
+   Using attribute selector on html[data-theme="dark"] for specificity.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page backgrounds ── */
+[data-theme="dark"] .adb-root,
+[data-theme="dark"] .applicant-dashboard-root {
+  background: var(--cc-bg-gradient) !important;
+}
+
+/* ── White cards / panels ── */
+[data-theme="dark"] .adb-right,
+[data-theme="dark"] .applicant-dashboard-right {
+  background-color: var(--cc-surface) !important;
+  box-shadow: var(--cc-shadow-md) !important;
+}
+
+/* ── Search bar ── */
+[data-theme="dark"] .adb-search-bar {
+  background-color: var(--cc-surface) !important;
+  border-color: var(--cc-border) !important;
+}
+
+/* ── Job cards ── */
+[data-theme="dark"] [class*="job-card"],
+[data-theme="dark"] .adb-joblist > div > div {
+  background-color: var(--cc-surface) !important;
+  border-color: var(--cc-border) !important;
+}
+
+/* ── Modals / drawers ── */
+[data-theme="dark"] .adb-drawer {
+  background-color: var(--cc-surface) !important;
+}
+
+/* ── Auth pages ── */
+[data-theme="dark"] .auth-card {
+  background: var(--cc-surface) !important;
+  box-shadow: var(--cc-shadow-lg) !important;
+}
+[data-theme="dark"] .auth-card h1,
+[data-theme="dark"] .auth-card label { color: var(--cc-text-1) !important; }
+[data-theme="dark"] .auth-sub        { color: var(--cc-text-3) !important; }
+[data-theme="dark"] .auth-link       { color: var(--cc-text-2) !important; }
+[data-theme="dark"] .auth-divider span { background: var(--cc-surface) !important; color: var(--cc-text-3) !important; }
+[data-theme="dark"] .auth-divider::before { background: var(--cc-border) !important; }
+[data-theme="dark"] .btn-google {
+  background: var(--cc-surface) !important;
+  border-color: var(--cc-border) !important;
+  color: var(--cc-text-1) !important;
+}
+[data-theme="dark"] .btn-google:hover { background: var(--cc-surface-2) !important; }
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select {
+  background: var(--cc-input-bg) !important;
+  border-color: var(--cc-input-border) !important;
+  color: var(--cc-text-1) !important;
+}
+[data-theme="dark"] .form-group label { color: var(--cc-text-2) !important; }
+[data-theme="dark"] .auth-error {
+  background: var(--cc-red-bg) !important;
+  color: var(--cc-red) !important;
+  border-color: var(--cc-red) !important;
+}
+
+/* ── Dashboard cards ── */
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .stat-card {
+  background: var(--cc-surface) !important;
+  box-shadow: var(--cc-shadow-md) !important;
+}
+[data-theme="dark"] .dashboard-card p,
+[data-theme="dark"] .stat-card p { color: var(--cc-text-2) !important; }
+[data-theme="dark"] .job-card {
+  background: var(--cc-surface) !important;
+  box-shadow: var(--cc-shadow) !important;
+}
+
+/* ── Admin layout ── */
+[data-theme="dark"] .bg-\[\#F8FAFF\],
+[data-theme="dark"] .bg-\[\#F0F7FF\] { background-color: var(--cc-surface-2) !important; }
+[data-theme="dark"] .border-\[\#D0E4FF\] { border-color: var(--cc-blue-border) !important; }
+
+/* ── Dropdown menus ── */
+[data-theme="dark"] [class*="dropdown"],
+[data-theme="dark"] [class*="Dropdown"] {
+  background-color: var(--cc-surface) !important;
+  border-color: var(--cc-border) !important;
+}
+
+/* ── Badges / chips ── */
+[data-theme="dark"] .role-badge.admin     { background: #451A03 !important; color: #FCD34D !important; }
+[data-theme="dark"] .role-badge.recruiter { background: #1E3A5F !important; color: #93C5FD !important; }
+[data-theme="dark"] .role-badge.applicant { background: #14532D !important; color: #4ADE80 !important; }
+
+/* ── Skeleton loaders ── */
+[data-theme="dark"] [style*="backgroundColor: '#E4E2E0'"],
+[data-theme="dark"] [style*="background-color: #E4E2E0"] {
+  background-color: var(--cc-surface-2) !important;
+}
+
+/* ── Tailwind prose / text in dark ── */
+[data-theme="dark"] h1, [data-theme="dark"] h2,
+[data-theme="dark"] h3, [data-theme="dark"] h4 {
+  color: var(--cc-text-1);
+}
+[data-theme="dark"] p { color: var(--cc-text-2); }
+[data-theme="dark"] a { color: var(--cc-blue); }
+
+/* ── Focus rings ── */
+[data-theme="dark"] *:focus-visible {
+  outline-color: var(--cc-blue) !important;
+}
+
+/* ── Dividers ── */
+[data-theme="dark"] hr,
+[data-theme="dark"] .divide-y > * + * {
+  border-color: var(--cc-border) !important;
+}
+
+/* ── Transition for smooth theme switch ── */
+[data-theme="dark"] *,
+[data-theme="light"] * {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease;
+}
+/* Don't animate transforms/opacity (breaks animations) */
+[data-theme="dark"] *,
+[data-theme="light"] * {
+  transition-property: background-color, border-color, color, box-shadow;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Legacy class-based styles (kept for backward compat)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .auth-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--cc-bg);
 }
 
 .auth-card {
-  background: #fff;
+  background: var(--cc-surface);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  box-shadow: var(--cc-shadow-lg);
   width: 100%;
   max-width: 420px;
+  border: 1px solid var(--cc-border);
 }
 
 .auth-card h1 {
   font-size: 1.6rem;
   margin-bottom: 0.25rem;
+  color: var(--cc-text-1);
 }
 
 .auth-sub {
-  color: #888;
+  color: var(--cc-text-3);
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
 }
 
 .auth-error {
-  background: #fff0f0;
-  color: #c0392b;
-  border: 1px solid #f5c6cb;
+  background: var(--cc-red-bg);
+  color: var(--cc-red);
+  border: 1px solid var(--cc-red);
   padding: 0.6rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
+.form-group { margin-bottom: 1rem; }
 
 .form-group label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 0.3rem;
-  color: #555;
+  color: var(--cc-text-2);
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
   padding: 0.6rem 0.8rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--cc-input-border);
   border-radius: 6px;
   font-size: 0.95rem;
   outline: none;
   transition: border 0.2s;
+  background: var(--cc-input-bg);
+  color: var(--cc-text-1);
 }
 
 .form-group input:focus,
-.form-group select:focus {
-  border-color: #4f46e5;
-}
+.form-group select:focus { border-color: var(--cc-blue); }
 
 .btn-primary {
   width: 100%;
   padding: 0.7rem;
-  background: #4f46e5;
+  background: var(--cc-blue);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -88,61 +407,93 @@ body {
   margin-top: 0.5rem;
   transition: background 0.2s;
 }
-
-.btn-primary:hover:not(:disabled) { background: #4338ca; }
+.btn-primary:hover:not(:disabled) { background: var(--cc-blue-hover); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-outline {
   padding: 0.5rem 1rem;
   background: transparent;
-  border: 1px solid #4f46e5;
-  color: #4f46e5;
+  border: 1px solid var(--cc-blue);
+  color: var(--cc-blue);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s;
 }
-
-.btn-outline:hover { background: #4f46e5; color: #fff; }
+.btn-outline:hover { background: var(--cc-blue); color: #fff; }
 
 .auth-link {
   text-align: center;
   margin-top: 1.2rem;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--cc-text-3);
+}
+.auth-link a { color: var(--cc-blue); text-decoration: none; font-weight: 600; }
+
+.auth-divider {
+  text-align: center;
+  margin: 1.2rem 0;
+  position: relative;
+}
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 1px;
+  background: var(--cc-border);
+}
+.auth-divider span {
+  background: var(--cc-surface);
+  padding: 0 0.75rem;
+  position: relative;
+  color: var(--cc-text-3);
+  font-size: 0.85rem;
 }
 
-.auth-link a { color: #4f46e5; text-decoration: none; font-weight: 600; }
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid var(--cc-border);
+  border-radius: 6px;
+  background: var(--cc-surface);
+  color: var(--cc-text-1);
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-google:hover { background: var(--cc-surface-2); }
 
-/* Dashboard */
 .dashboard { padding: 2rem; max-width: 900px; margin: 0 auto; }
-
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
 }
-
 .dashboard-card {
-  background: #fff;
+  background: var(--cc-surface);
   border-radius: 10px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--cc-shadow-md);
+  border: 1px solid var(--cc-border);
 }
+.dashboard-card p { margin-top: 0.5rem; color: var(--cc-text-2); }
 
-.dashboard-card p { margin-top: 0.5rem; color: #555; }
-
-/* Job card */
 .job-card {
-  background: #fff;
+  background: var(--cc-surface);
   border-radius: 8px;
   padding: 1rem;
   margin: 1rem 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  box-shadow: var(--cc-shadow);
+  border: 1px solid var(--cc-border);
 }
 
-/* Role badges */
 .role-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
@@ -156,66 +507,25 @@ body {
 .role-badge.recruiter { background: #dbeafe; color: #1e40af; }
 .role-badge.applicant { background: #dcfce7; color: #166534; }
 
-/* Stats grid for admin */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-top: 1.5rem;
 }
-
 .stat-card {
-  background: #fff;
+  background: var(--cc-surface);
   border-radius: 10px;
   padding: 1.5rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--cc-shadow-md);
+  border: 1px solid var(--cc-border);
 }
+.stat-card h3 { font-size: 2rem; color: var(--cc-blue); margin-bottom: 0.25rem; }
+.stat-card p  { color: var(--cc-text-3); font-size: 0.9rem; }
 
-.stat-card h3 {
-  font-size: 2rem;
-  color: #4f46e5;
-  margin-bottom: 0.25rem;
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
-
-.stat-card p { color: #666; font-size: 0.9rem; }
-
-/* Google OAuth button */
-.auth-divider {
-  text-align: center;
-  margin: 1.2rem 0;
-  position: relative;
-}
-.auth-divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0; right: 0;
-  height: 1px;
-  background: #e5e7eb;
-}
-.auth-divider span {
-  background: #fff;
-  padding: 0 0.75rem;
-  position: relative;
-  color: #9ca3af;
-  font-size: 0.85rem;
-}
-
-.btn-google {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.65rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  color: #333;
-  font-size: 0.95rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.2s;
-}
-.btn-google:hover { background: #f9fafb; }
+.animate-slide-in { animation: slide-in 0.3s ease-out; }

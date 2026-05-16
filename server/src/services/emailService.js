@@ -120,6 +120,12 @@ exports.sendStatusUpdateEmail = ({ applicant, job, status }) => {
     rejected: { tag: 'tag-red',   label: 'Not Selected', message: 'Thank you for your interest. Unfortunately, the employer has decided to move forward with other candidates. Keep applying — the right opportunity is out there.' },
     reviewed: { tag: 'tag-blue',  label: 'Under Review', message: 'Good news — the employer is actively reviewing your application.' }
   }
+  statusConfig.shortlisted = {
+    tag: 'tag-green',
+    label: 'Shortlisted',
+    message: 'Good news! You have been shortlisted for this role. Watch your notifications for interview or next-step updates.'
+  }
+  statusConfig.accepted.label = 'Accepted'
   const cfg = statusConfig[status] || statusConfig.reviewed
 
   return sendMail({
@@ -136,6 +142,29 @@ exports.sendStatusUpdateEmail = ({ applicant, job, status }) => {
   })
 }
 
+exports.sendInterviewUpdateEmail = ({ applicant, job, interview, isReschedule = false }) => {
+  const dateLine = [
+    interview?.date,
+    interview?.time,
+    interview?.type === 'in-person' ? 'In-person' : 'Virtual'
+  ].filter(Boolean).join(' - ')
+
+  return sendMail({
+    to: applicant.email,
+    subject: `${isReschedule ? 'Interview rescheduled' : 'Interview scheduled'} - ${job.title} at ${job.company}`,
+    html: base(`
+      <h2>${isReschedule ? 'Interview Rescheduled' : 'Interview Scheduled'}</h2>
+      <p>Hi <strong>${applicant.name}</strong>,</p>
+      <p>Your interview for <strong>${job.title}</strong> at <strong>${job.company}</strong> has been ${isReschedule ? 'rescheduled' : 'scheduled'}.</p>
+      ${dateLine ? `<p><strong>When:</strong> ${dateLine}</p>` : ''}
+      ${interview?.meetingLink ? `<p><strong>Meeting link:</strong> <a href="${interview.meetingLink}">${interview.meetingLink}</a></p>` : ''}
+      ${interview?.address ? `<p><strong>Address:</strong> ${interview.address}</p>` : ''}
+      ${interview?.notes ? `<p><strong>Notes:</strong> ${interview.notes}</p>` : ''}
+      <a href="${process.env.CLIENT_URL}/my-jobs?tab=interviews" class="btn">View Interview</a>
+    `)
+  })
+}
+
 exports.sendNewApplicationEmail = ({ employer, applicant, job }) => sendMail({
   to: employer.email,
   subject: `New application for ${job.title}`,
@@ -147,3 +176,50 @@ exports.sendNewApplicationEmail = ({ employer, applicant, job }) => sendMail({
     <a href="${process.env.CLIENT_URL}/dashboard/recruiter" class="btn">Review Application</a>
   `)
 })
+
+exports.sendJobMatchEmail = ({ applicant, job }) => sendMail({
+  to: applicant.email,
+  subject: `New ${job.title} job in ${job.location || 'your area'}`,
+  html: base(`
+    <h2>A New Job Matches Your Preferences!</h2>
+    <p>Hi <strong>${applicant.name}</strong>,</p>
+    <p>A new role has been posted that matches your profile:</p>
+    <div style="background:#f8f9fa; border-radius:8px; padding:16px; margin:16px 0;">
+      <p style="margin:0 0 4px; font-size:16px; font-weight:700; color:#1A1A2E;">${job.title}</p>
+      <p style="margin:0 0 4px; color:#595959;">${job.company}</p>
+      <p style="margin:0; color:#767676;">📍 ${job.location || 'Remote'} · ${(job.jobType || []).join(', ')} · ${job.workMode || 'remote'}</p>
+    </div>
+    <a href="${process.env.CLIENT_URL}/dashboard/applicant" class="btn">View Job</a>
+    <p style="margin-top:20px; color:#999; font-size:12px;">You're receiving this because your preferences match this job. <a href="${process.env.CLIENT_URL}/profile" style="color:#2557A7;">Update preferences</a></p>
+  `)
+})
+
+exports.sendPasswordResetEmail = ({ user, resetUrl }) => sendMail({
+  to: user.email,
+  subject: 'Reset your CareerConnect password',
+  html: base(`
+    <h2>Password Reset Request</h2>
+    <p>Hi <strong>${user.name}</strong>,</p>
+    <p>We received a request to reset your password. Click the button below to set a new one:</p>
+    <a href="${resetUrl}" class="btn">Reset Password</a>
+    <p style="margin-top:24px; color:#666; font-size:13px;">
+      This link expires in <strong>15 minutes</strong>. If you didn't request a password reset, you can safely ignore this email — your password won't change.
+    </p>
+    <p style="color:#999; font-size:12px; margin-top:16px;">
+      If the button doesn't work, copy and paste this link:<br/>
+      <a href="${resetUrl}" style="color:#2557A7; word-break:break-all;">${resetUrl}</a>
+    </p>
+  `)
+})
+
+// ─── Generic email sender for admin announcements ─────────────────────────────
+exports.sendEmail = async (to, subject, message) => {
+  return sendMail({
+    to,
+    subject,
+    html: base(`
+      <h2>${subject}</h2>
+      <p style="white-space: pre-wrap;">${message}</p>
+    `)
+  })
+}

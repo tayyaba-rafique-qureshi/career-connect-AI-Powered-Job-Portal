@@ -12,9 +12,15 @@ node_modules/
 client/node_modules/
 server/node_modules/
 ai-service/__pycache__/
+ai-service/**/__pycache__/
 ai-service/*.pyc
+ai-service/**/*.pyc
 ai-service/venv/
 ai-service/.venv/
+tests/**/__pycache__/
+tests/**/*.pyc
+**/__pycache__/
+**/*.pyc
 
 # ─── Build outputs ─────────────────────────────────────────────────────────────
 client/dist/
@@ -36,6 +42,15 @@ desktop.ini
 *.suo
 *.user
 
+# ─── AI agent workspace (local) ────────────────────────────────────────────────
+.claude/
+
 # ─── Uploads / temp ────────────────────────────────────────────────────────────
 uploads/
 tmp/
+
+# ─── Admin Module Files ────────────────────────────────────────────────────────
+ADMIN_MODULE_IMPLEMENTATION_SUMMARY.md
+ADMIN_MODULE_SETUP.md
+ADMIN_MODULE_TEST_CHECKLIST.md
+.kiro/specs/admin-module/
