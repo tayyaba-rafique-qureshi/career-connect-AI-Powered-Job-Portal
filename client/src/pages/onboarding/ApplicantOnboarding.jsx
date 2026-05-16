@@ -175,6 +175,11 @@ export default function ApplicantOnboarding() {
           }, resume.file)
           markProfileComplete()
           navigate('/dashboard/applicant')
+        } catch (uploadError) {
+          // Show specific error message from backend
+          const errorMsg = uploadError.response?.data?.message || 'Failed to upload resume. Please try again.'
+          setErrors({ resume: errorMsg })
+          console.error('Resume upload error:', uploadError)
         } finally {
           setUploading(false)
         }
@@ -183,6 +188,9 @@ export default function ApplicantOnboarding() {
       setStep(s => s + 1)
     } catch (err) {
       console.error(err)
+      // Show generic error for other steps
+      const errorMsg = err.response?.data?.message || 'An error occurred. Please try again.'
+      setErrors({ general: errorMsg })
     }
   }
 
