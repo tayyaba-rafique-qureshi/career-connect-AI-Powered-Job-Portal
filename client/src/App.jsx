@@ -21,6 +21,8 @@ import Messages from './pages/applicant/Messages'
 import Notifications from './pages/applicant/Notifications'
 import ProfilePage from './pages/applicant/ProfilePage'
 import CompanyReviews from './pages/applicant/CompanyReviews'
+import HelpPage from './pages/applicant/HelpPage'
+import ResumeBuilderPage from './pages/applicant/ResumeBuilderPage'
 import EmployerMessages from './pages/employer/EmployerMessages'
 import ProtectedRoute from './components/ProtectedRoute'
 import OnboardingRoute from './components/OnboardingRoute'
@@ -71,6 +73,16 @@ export default function App() {
         <Route path="/company-reviews" element={
           <ProtectedRoute allowedRoles={['applicant']}>
             <CompanyReviews />
+          </ProtectedRoute>
+        } />
+        <Route path="/help" element={
+          <ProtectedRoute allowedRoles={['applicant']}>
+            <HelpPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/resume-builder" element={
+          <ProtectedRoute allowedRoles={['applicant']}>
+            <ResumeBuilderPage />
           </ProtectedRoute>
         } />
 

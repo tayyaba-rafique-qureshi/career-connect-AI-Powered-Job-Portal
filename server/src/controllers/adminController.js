@@ -5,8 +5,9 @@ const Setting = require('../models/Setting')
 const AuditLog = require('../models/AuditLog')
 const AnnouncementBanner = require('../models/AnnouncementBanner')
 const AdminNote = require('../models/AdminNote')
+const Notification = require('../models/Notification')
 const { logAdminAction } = require('../utils/auditLogger')
-const { sendEmail } = require('../services/emailService')
+const { sendEmail, sendStatusUpdateEmail } = require('../services/emailService')
 const jwt = require('jsonwebtoken')
 const os = require('os')
 const mongoose = require('mongoose')
@@ -716,6 +717,22 @@ const updateApplicationStatus = async (req, res) => {
     // Populate after saving to return full data
     await application.populate('applicant', 'name email')
     await application.populate('job', 'title company')
+
+    if (oldStatus !== status) {
+      sendStatusUpdateEmail({
+        applicant: application.applicant,
+        job: application.job,
+        status
+      })
+
+      await Notification.create({
+        user: application.applicant._id,
+        type: 'status_update',
+        title: 'Application update',
+        message: `${application.job.title} at ${application.job.company}: ${status}`,
+        link: '/my-jobs?tab=applied',
+      }).catch(() => {})
+    }
 
     await logAdminAction(
       req.user.id,

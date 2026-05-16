@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Bookmark, MessageSquare, Bell, User, Menu, X } from 'lucide-react'
+import { Bookmark, MessageSquare, Bell, User, Menu, X, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { getNotifications } from '../../services/notificationService'
 import { getUnreadMessageCount } from '../../services/messageService'
+import EmployerAuthModal from './EmployerAuthModal'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
+  const [employerModalOpen, setEmployerModalOpen] = useState(false)
+  const { isDark, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -147,14 +151,26 @@ export default function Navbar() {
               )}
             </div>
 
-            <div className="w-px h-7 bg-[#E4E2E0] mx-3" />
+            {/* Dark mode toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="w-10 h-10 rounded-full inline-flex items-center justify-center text-[#595959] hover:text-[#2557A7] hover:bg-gray-100 transition-colors"
+              aria-label="Toggle dark mode"
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
 
-            <Link
-              to="/dashboard/recruiter"
+            <div className="w-px h-7 bg-[#E4E2E0] mx-2" />
+
+            <button
+              type="button"
+              onClick={() => setEmployerModalOpen(true)}
               className="h-9 px-4 inline-flex items-center rounded-md border border-[#2557A7] text-sm font-semibold text-[#2557A7] hover:bg-[#2557A7] hover:text-white transition-colors whitespace-nowrap"
             >
-              Employers / Post Job
-            </Link>
+              For Employers
+            </button>
           </div>
         </div>
       </header>
@@ -206,12 +222,13 @@ export default function Navbar() {
               <MobileNavLink to="/profile">My profile</MobileNavLink>
 
               <div className="pt-3 border-t border-gray-100 space-y-2">
-                <Link
-                  to="/dashboard/recruiter"
+                <button
+                  type="button"
+                  onClick={() => { setMobileOpen(false); setEmployerModalOpen(true) }}
                   className="w-full h-10 px-3 inline-flex items-center justify-center rounded-lg border border-[#2557A7] text-sm font-semibold text-[#2557A7] hover:bg-[#2557A7] hover:text-white transition-colors"
                 >
-                  Employers / Post Job
-                </Link>
+                  For Employers
+                </button>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -223,6 +240,11 @@ export default function Navbar() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Employer Auth Modal */}
+      {employerModalOpen && (
+        <EmployerAuthModal onClose={() => setEmployerModalOpen(false)} />
       )}
     </>
   )

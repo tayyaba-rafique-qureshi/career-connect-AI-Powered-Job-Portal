@@ -120,6 +120,12 @@ exports.sendStatusUpdateEmail = ({ applicant, job, status }) => {
     rejected: { tag: 'tag-red',   label: 'Not Selected', message: 'Thank you for your interest. Unfortunately, the employer has decided to move forward with other candidates. Keep applying — the right opportunity is out there.' },
     reviewed: { tag: 'tag-blue',  label: 'Under Review', message: 'Good news — the employer is actively reviewing your application.' }
   }
+  statusConfig.shortlisted = {
+    tag: 'tag-green',
+    label: 'Shortlisted',
+    message: 'Good news! You have been shortlisted for this role. Watch your notifications for interview or next-step updates.'
+  }
+  statusConfig.accepted.label = 'Accepted'
   const cfg = statusConfig[status] || statusConfig.reviewed
 
   return sendMail({
@@ -132,6 +138,29 @@ exports.sendStatusUpdateEmail = ({ applicant, job, status }) => {
       <p><span class="tag ${cfg.tag}">${cfg.label}</span></p>
       <p>${cfg.message}</p>
       <a href="${process.env.CLIENT_URL}/dashboard/applicant" class="btn">View Application</a>
+    `)
+  })
+}
+
+exports.sendInterviewUpdateEmail = ({ applicant, job, interview, isReschedule = false }) => {
+  const dateLine = [
+    interview?.date,
+    interview?.time,
+    interview?.type === 'in-person' ? 'In-person' : 'Virtual'
+  ].filter(Boolean).join(' - ')
+
+  return sendMail({
+    to: applicant.email,
+    subject: `${isReschedule ? 'Interview rescheduled' : 'Interview scheduled'} - ${job.title} at ${job.company}`,
+    html: base(`
+      <h2>${isReschedule ? 'Interview Rescheduled' : 'Interview Scheduled'}</h2>
+      <p>Hi <strong>${applicant.name}</strong>,</p>
+      <p>Your interview for <strong>${job.title}</strong> at <strong>${job.company}</strong> has been ${isReschedule ? 'rescheduled' : 'scheduled'}.</p>
+      ${dateLine ? `<p><strong>When:</strong> ${dateLine}</p>` : ''}
+      ${interview?.meetingLink ? `<p><strong>Meeting link:</strong> <a href="${interview.meetingLink}">${interview.meetingLink}</a></p>` : ''}
+      ${interview?.address ? `<p><strong>Address:</strong> ${interview.address}</p>` : ''}
+      ${interview?.notes ? `<p><strong>Notes:</strong> ${interview.notes}</p>` : ''}
+      <a href="${process.env.CLIENT_URL}/my-jobs?tab=interviews" class="btn">View Interview</a>
     `)
   })
 }
