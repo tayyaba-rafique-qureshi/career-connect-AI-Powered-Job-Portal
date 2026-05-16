@@ -73,7 +73,7 @@ const AdminJobs = () => {
 
   useEffect(() => {
     fetchJobs()
-  }, [pagination.page, filters])
+  }, [pagination.page, filters, isFeaturedView])
 
   const fetchJobs = async () => {
     setLoading(true)
@@ -83,19 +83,18 @@ const AdminJobs = () => {
         limit: pagination.limit,
         ...filters
       }
-      const response = await getJobs(params)
       
-      // Filter for featured jobs if in featured view
-      let jobsData = response.data.data
+      // Add isFeatured filter if in featured view
       if (isFeaturedView) {
-        jobsData = jobsData.filter(job => job.isFeatured)
+        params.isFeatured = 'true'
       }
       
-      setJobs(jobsData)
+      const response = await getJobs(params)
+      
+      setJobs(response.data.data)
       setPagination(prev => ({ 
         ...prev, 
-        ...response.data.pagination,
-        total: isFeaturedView ? jobsData.length : response.data.pagination.total
+        ...response.data.pagination
       }))
     } catch (error) {
       setToast({ message: error.response?.data?.message || 'Failed to fetch jobs', type: 'error' })
