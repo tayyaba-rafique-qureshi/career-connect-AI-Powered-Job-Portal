@@ -74,7 +74,7 @@ export default function HeroSection() {
             </div>
 
             {/* Dual CTA */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div id="hero-cta" className="flex flex-col sm:flex-row gap-3">
               <a href="/register" className="inline-flex items-center justify-center gap-2 bg-[#2557A7] text-white font-semibold px-6 py-3 rounded hover:bg-[#1a4283] transition-colors text-sm">
                 I'm looking for a job →
               </a>

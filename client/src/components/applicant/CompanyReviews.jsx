@@ -16,8 +16,8 @@ function StarPicker({ value, onChange }) {
         <Star
           key={i}
           size={24}
-          fill={(hovered || value) >= i ? '#F5A623' : 'none'}
-          stroke={(hovered || value) >= i ? '#F5A623' : '#D4D2D0'}
+          fill={(hovered || value) >= i ? 'var(--cc-amber)' : 'none'}
+          stroke={(hovered || value) >= i ? 'var(--cc-amber)' : 'var(--cc-border)'}
           style={{ cursor: 'pointer', transition: 'all 0.1s' }}
           onMouseEnter={() => setHovered(i)}
           onMouseLeave={() => setHovered(0)}
@@ -33,8 +33,8 @@ function StarDisplay({ rating, size = 13 }) {
     <div style={{ display: 'flex', gap: '2px' }}>
       {[1, 2, 3, 4, 5].map(i => (
         <Star key={i} size={size}
-          fill={i <= Math.round(rating) ? '#F5A623' : 'none'}
-          stroke={i <= Math.round(rating) ? '#F5A623' : '#D4D2D0'}
+          fill={i <= Math.round(rating) ? 'var(--cc-amber)' : 'none'}
+          stroke={i <= Math.round(rating) ? 'var(--cc-amber)' : 'var(--cc-border)'}
         />
       ))}
     </div>
@@ -44,7 +44,7 @@ function StarDisplay({ rating, size = 13 }) {
 function SubRatingRow({ label, value, onChange }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-      <span style={{ fontSize: '13px', color: '#595959', width: '130px', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: '13px', color: 'var(--cc-text-2)', width: '130px', flexShrink: 0 }}>{label}</span>
       <StarPicker value={value} onChange={onChange} />
     </div>
   )
@@ -109,14 +109,14 @@ export default function CompanyReviews({ companyName }) {
       {/* Section header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#2D2D2D', margin: '0 0 2px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--cc-text-1)', margin: '0 0 2px' }}>
             {companyName} Reviews
           </h2>
           {avgRating && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <StarDisplay rating={parseFloat(avgRating)} size={14} />
-              <span style={{ fontSize: '14px', fontWeight: '700', color: '#2D2D2D' }}>{avgRating}</span>
-              <span style={{ fontSize: '13px', color: '#767676' }}>({reviews.length} review{reviews.length !== 1 ? 's' : ''})</span>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--cc-text-1)' }}>{avgRating}</span>
+              <span style={{ fontSize: '13px', color: 'var(--cc-text-3)' }}>({reviews.length} review{reviews.length !== 1 ? 's' : ''})</span>
             </div>
           )}
         </div>
@@ -124,9 +124,9 @@ export default function CompanyReviews({ companyName }) {
           onClick={() => { setShowForm(!showForm); setSubmitted(false) }}
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', backgroundColor: showForm ? '#F7F9FC' : '#2557A7',
-            color: showForm ? '#595959' : 'white',
-            border: showForm ? '1px solid #E4E2E0' : 'none',
+            padding: '8px 16px', backgroundColor: showForm ? 'var(--cc-surface-2)' : 'var(--cc-blue)',
+            color: showForm ? 'var(--cc-text-2)' : 'var(--cc-text-4)',
+            border: showForm ? '1px solid var(--cc-border)' : 'none',
             borderRadius: '6px', fontSize: '13px', fontWeight: '600',
             cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
           }}
@@ -139,8 +139,8 @@ export default function CompanyReviews({ companyName }) {
       {/* Success banner */}
       {submitted && (
         <div style={{
-          padding: '12px 16px', backgroundColor: '#E7F5E8', border: '1px solid #A8D5AD',
-          borderRadius: '8px', marginBottom: '16px', fontSize: '14px', color: '#137333', fontWeight: '500',
+          padding: '12px 16px', backgroundColor: 'var(--cc-green-bg)', border: '1px solid var(--cc-green-border)',
+          borderRadius: '8px', marginBottom: '16px', fontSize: '14px', color: 'var(--cc-green)', fontWeight: '500',
         }}>
           ✓ Your review has been submitted and is now visible on the Company Reviews page.
         </div>
@@ -149,22 +149,22 @@ export default function CompanyReviews({ companyName }) {
       {/* Review form */}
       {showForm && (
         <form onSubmit={handleSubmit} style={{
-          backgroundColor: '#F7F9FC', border: '1px solid #E4E2E0',
+          backgroundColor: 'var(--cc-surface-2)', border: '1px solid var(--cc-border)',
           borderRadius: '8px', padding: '20px', marginBottom: '16px',
         }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#2D2D2D', margin: '0 0 16px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--cc-text-1)', margin: '0 0 16px' }}>
             Rate {companyName}
           </h3>
 
           {error && (
-            <div style={{ padding: '10px 14px', backgroundColor: '#FEECEA', border: '1px solid #F5C6C2', borderRadius: '6px', marginBottom: '14px', fontSize: '13px', color: '#D93025' }}>
+            <div style={{ padding: '10px 14px', backgroundColor: 'var(--cc-red-bg)', border: '1px solid var(--cc-red)', borderRadius: '6px', marginBottom: '14px', fontSize: '13px', color: 'var(--cc-red)' }}>
               {error}
             </div>
           )}
 
           {/* Overall rating */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D2D2D', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-text-1)', marginBottom: '8px' }}>
               Overall rating *
             </label>
             <StarPicker value={form.rating} onChange={v => set('rating', v)} />
@@ -172,46 +172,46 @@ export default function CompanyReviews({ companyName }) {
 
           {/* Title */}
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D2D2D', marginBottom: '6px' }}>Review title *</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-text-1)', marginBottom: '6px' }}>Review title *</label>
             <input value={form.title} onChange={e => set('title', e.target.value)}
               placeholder="Summarize your experience"
-              style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid var(--cc-input-border)', borderRadius: '6px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'var(--cc-input-bg)', color: 'var(--cc-text-1)' }}
             />
           </div>
 
           {/* Pros / Cons */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D7D2E', marginBottom: '6px' }}>Pros</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-green)', marginBottom: '6px' }}>Pros</label>
               <textarea value={form.pros} onChange={e => set('pros', e.target.value)}
                 placeholder="What did you like?"
                 rows={3}
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--cc-input-border)', borderRadius: '6px', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'var(--cc-input-bg)', color: 'var(--cc-text-1)' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#D93025', marginBottom: '6px' }}>Cons</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-red)', marginBottom: '6px' }}>Cons</label>
               <textarea value={form.cons} onChange={e => set('cons', e.target.value)}
                 placeholder="What could be improved?"
                 rows={3}
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--cc-input-border)', borderRadius: '6px', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'var(--cc-input-bg)', color: 'var(--cc-text-1)' }}
               />
             </div>
           </div>
 
           {/* Body */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D2D2D', marginBottom: '6px' }}>Full review (optional)</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-text-1)', marginBottom: '6px' }}>Full review (optional)</label>
             <textarea value={form.body} onChange={e => set('body', e.target.value)}
               placeholder="Share more details about your experience..."
               rows={4}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--cc-input-border)', borderRadius: '6px', fontSize: '13px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'var(--cc-input-bg)', color: 'var(--cc-text-1)' }}
             />
           </div>
 
           {/* Sub-ratings */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D2D2D', marginBottom: '10px' }}>Rate specific areas (optional)</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-text-1)', marginBottom: '10px' }}>Rate specific areas (optional)</label>
             <SubRatingRow label="Work-life balance" value={form.workLifeBalance} onChange={v => set('workLifeBalance', v)} />
             <SubRatingRow label="Compensation"      value={form.compensation}    onChange={v => set('compensation', v)} />
             <SubRatingRow label="Job security"      value={form.jobSecurity}     onChange={v => set('jobSecurity', v)} />
@@ -222,16 +222,16 @@ export default function CompanyReviews({ companyName }) {
           {/* Role + type + recommend */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '140px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D2D2D', marginBottom: '6px' }}>Your role</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-text-1)', marginBottom: '6px' }}>Your role</label>
               <input value={form.role} onChange={e => set('role', e.target.value)}
                 placeholder="e.g. Software Engineer"
-                style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid var(--cc-input-border)', borderRadius: '6px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'var(--cc-input-bg)', color: 'var(--cc-text-1)' }}
               />
             </div>
             <div style={{ flex: 1, minWidth: '140px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#2D2D2D', marginBottom: '6px' }}>Employment type</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--cc-text-1)', marginBottom: '6px' }}>Employment type</label>
               <select value={form.employmentType} onChange={e => set('employmentType', e.target.value)}
-                style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: 'white', fontFamily: 'inherit', boxSizing: 'border-box' }}>
+                style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid var(--cc-input-border)', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: 'var(--cc-input-bg)', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--cc-text-1)' }}>
                 {['Full-time', 'Part-time', 'Contract', 'Intern'].map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
@@ -239,17 +239,17 @@ export default function CompanyReviews({ companyName }) {
 
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '16px' }}>
             <input type="checkbox" checked={form.recommended} onChange={e => set('recommended', e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: '#2557A7' }} />
-            <span style={{ fontSize: '13px', color: '#595959' }}>I would recommend this company to a friend</span>
+              style={{ width: '16px', height: '16px', accentColor: 'var(--cc-blue)' }} />
+            <span style={{ fontSize: '13px', color: 'var(--cc-text-2)' }}>I would recommend this company to a friend</span>
           </label>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
             <button type="button" onClick={() => setShowForm(false)}
-              style={{ padding: '8px 20px', border: '1px solid #D4D2D0', borderRadius: '6px', fontSize: '13px', color: '#595959', background: 'white', cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '8px 20px', border: '1px solid var(--cc-border)', borderRadius: '6px', fontSize: '13px', color: 'var(--cc-text-2)', background: 'var(--cc-surface)', cursor: 'pointer', fontFamily: 'inherit' }}>
               Cancel
             </button>
             <button type="submit" disabled={submitting}
-              style={{ padding: '8px 24px', backgroundColor: submitting ? '#6B8EC7' : '#2557A7', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: submitting ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '8px 24px', backgroundColor: submitting ? 'var(--cc-blue-border)' : 'var(--cc-blue)', color: 'var(--cc-text-4)', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: submitting ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
               {submitting ? 'Submitting…' : 'Submit Review'}
             </button>
           </div>
@@ -258,45 +258,45 @@ export default function CompanyReviews({ companyName }) {
 
       {/* Reviews list */}
       {loading ? (
-        <div style={{ fontSize: '13px', color: '#767676', padding: '12px 0' }}>Loading reviews…</div>
+        <div style={{ fontSize: '13px', color: 'var(--cc-text-3)', padding: '12px 0' }}>Loading reviews…</div>
       ) : reviews.length === 0 ? (
         <div style={{
-          padding: '20px', backgroundColor: '#F7F9FC', border: '1px solid #E4E2E0',
+          padding: '20px', backgroundColor: 'var(--cc-surface-2)', border: '1px solid var(--cc-border)',
           borderRadius: '8px', textAlign: 'center',
         }}>
-          <p style={{ fontSize: '14px', color: '#595959', margin: '0 0 4px' }}>No reviews yet for {companyName}</p>
-          <p style={{ fontSize: '13px', color: '#767676', margin: 0 }}>Be the first to share your experience</p>
+          <p style={{ fontSize: '14px', color: 'var(--cc-text-2)', margin: '0 0 4px' }}>No reviews yet for {companyName}</p>
+          <p style={{ fontSize: '13px', color: 'var(--cc-text-3)', margin: 0 }}>Be the first to share your experience</p>
         </div>
       ) : (
         <>
           {displayedReviews.map((r, i) => (
             <div key={r._id || i} style={{
-              backgroundColor: 'white', border: '1px solid #E4E2E0',
+              backgroundColor: 'var(--cc-surface)', border: '1px solid var(--cc-border)',
               borderRadius: '8px', padding: '16px', marginBottom: '10px',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <div>
-                  <p style={{ fontSize: '14px', fontWeight: '700', color: '#2D2D2D', margin: '0 0 4px' }}>{r.title}</p>
+                  <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--cc-text-1)', margin: '0 0 4px' }}>{r.title}</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <StarDisplay rating={r.rating} />
-                    <span style={{ fontSize: '12px', color: '#767676' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--cc-text-3)' }}>
                       {r.role || 'Employee'} · {r.employmentType} · {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                     </span>
                   </div>
                 </div>
                 {r.recommended && (
-                  <span style={{ fontSize: '12px', padding: '2px 8px', backgroundColor: '#E7F5E8', color: '#137333', borderRadius: '4px', fontWeight: '500', flexShrink: 0 }}>
+                  <span style={{ fontSize: '12px', padding: '2px 8px', backgroundColor: 'var(--cc-green-bg)', color: 'var(--cc-green)', borderRadius: '4px', fontWeight: '500', flexShrink: 0 }}>
                     ✓ Recommends
                   </span>
                 )}
               </div>
               {(r.pros || r.cons) && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', margin: '10px 0' }}>
-                  {r.pros && <div><p style={{ fontSize: '12px', fontWeight: '600', color: '#2D7D2E', margin: '0 0 3px' }}>Pros</p><p style={{ fontSize: '13px', color: '#595959', margin: 0 }}>{r.pros}</p></div>}
-                  {r.cons && <div><p style={{ fontSize: '12px', fontWeight: '600', color: '#D93025', margin: '0 0 3px' }}>Cons</p><p style={{ fontSize: '13px', color: '#595959', margin: 0 }}>{r.cons}</p></div>}
+                  {r.pros && <div><p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cc-green)', margin: '0 0 3px' }}>Pros</p><p style={{ fontSize: '13px', color: 'var(--cc-text-2)', margin: 0 }}>{r.pros}</p></div>}
+                  {r.cons && <div><p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cc-red)', margin: '0 0 3px' }}>Cons</p><p style={{ fontSize: '13px', color: 'var(--cc-text-2)', margin: 0 }}>{r.cons}</p></div>}
                 </div>
               )}
-              {r.body && <p style={{ fontSize: '13px', color: '#595959', lineHeight: 1.6, margin: '8px 0 0' }}>{r.body}</p>}
+              {r.body && <p style={{ fontSize: '13px', color: 'var(--cc-text-2)', lineHeight: 1.6, margin: '8px 0 0' }}>{r.body}</p>}
             </div>
           ))}
 
@@ -305,7 +305,7 @@ export default function CompanyReviews({ companyName }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#2557A7', fontSize: '13px', fontWeight: '600',
+                color: 'var(--cc-blue)', fontSize: '13px', fontWeight: '600',
                 padding: '4px 0', fontFamily: 'inherit',
               }}>
               {expanded

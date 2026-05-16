@@ -5,7 +5,8 @@ const aiService = require('../services/aiService')
 const {
   sendApplicationConfirmEmail,
   sendNewApplicationEmail,
-  sendStatusUpdateEmail
+  sendStatusUpdateEmail,
+  sendInterviewUpdateEmail
 } = require('../services/emailService')
 const Notification = require('../models/Notification')
 const mongoose = require('mongoose')
@@ -75,7 +76,16 @@ exports.applyToJob = async (req, res) => {
 
     if (job.postedBy) {
       const employer = await User.findById(job.postedBy)
-      if (employer) sendNewApplicationEmail({ employer, applicant, job: { ...job.toObject(), aiScore } })
+      if (employer) {
+        sendNewApplicationEmail({ employer, applicant, job: { ...job.toObject(), aiScore } })
+        await Notification.create({
+          user: employer._id,
+          type: 'general',
+          title: 'New application',
+          message: `${applicant?.name || 'An applicant'} applied for ${job.title}`,
+          link: `/dashboard/recruiter/jobs/${job._id}/applicants`,
+        }).catch(() => {})
+      }
     }
 
     res.status(201).json({
@@ -173,17 +183,20 @@ exports.updateStatus = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
+    const oldStatus = application.status
     application.status = status
     await application.save()
 
-    sendStatusUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      status
-    })
+    if (oldStatus !== status) {
+      sendStatusUpdateEmail({
+        applicant: application.applicant,
+        job: application.job,
+        status
+      })
+    }
 
     // In-app notification for applicant
-    try {
+    if (oldStatus !== status) try {
       await Notification.create({
         user: application.applicant._id,
         type: 'status_update',
@@ -208,6 +221,7 @@ exports.scheduleInterview = async (req, res) => {
 
     const application = await Application.findById(req.params.id)
       .populate('job', 'title company postedBy')
+      .populate('applicant', 'name email')
 
     if (!application) return res.status(404).json({ message: 'Application not found' })
 
@@ -239,10 +253,22 @@ exports.scheduleInterview = async (req, res) => {
     application.status = 'shortlisted'
     await application.save()
 
+    sendStatusUpdateEmail({
+      applicant: application.applicant,
+      job: application.job,
+      status: 'shortlisted'
+    })
+    sendInterviewUpdateEmail({
+      applicant: application.applicant,
+      job: application.job,
+      interview: application.interview,
+      isReschedule: false
+    })
+
     // In-app notification for applicant
     try {
       await Notification.create({
-        user: application.applicant,
+        user: application.applicant._id,
         type: 'interview',
         title: 'Interview scheduled',
         message: `${application.job.title} at ${application.job.company}${date ? ` · ${date}` : ''}${time ? ` ${time}` : ''}`,
@@ -265,6 +291,7 @@ exports.rescheduleInterview = async (req, res) => {
 
     const application = await Application.findById(req.params.id)
       .populate('job', 'title company postedBy')
+      .populate('applicant', 'name email')
 
     if (!application) return res.status(404).json({ message: 'Application not found' })
     if (application.job.postedBy.toString() !== req.user.id) {
@@ -295,6 +322,22 @@ exports.rescheduleInterview = async (req, res) => {
     }
 
     await application.save()
+
+    sendInterviewUpdateEmail({
+      applicant: application.applicant,
+      job: application.job,
+      interview: application.interview,
+      isReschedule: true
+    })
+
+    await Notification.create({
+      user: application.applicant._id,
+      type: 'interview',
+      title: 'Interview rescheduled',
+      message: `${application.job.title} at ${application.job.company}${application.interview.date ? ` Â· ${application.interview.date}` : ''}${application.interview.time ? ` ${application.interview.time}` : ''}`,
+      link: '/my-jobs?tab=interviews',
+    }).catch(() => {})
+
     res.json(application)
   } catch (err) {
     res.status(500).json({ message: err.message })

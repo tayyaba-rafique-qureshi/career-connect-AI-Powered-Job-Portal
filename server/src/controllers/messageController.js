@@ -2,9 +2,54 @@ const Message = require('../models/Message')
 const User = require('../models/User')
 const Job = require('../models/Job')
 const Notification = require('../models/Notification')
+const Application = require('../models/Application')
 
 function safeConvId(jobId, applicantId, employerId) {
   return `${jobId}_${applicantId}_${employerId}`
+}
+
+function parseConvId(conversationId) {
+  const [jobId, applicantId, employerId] = String(conversationId || '').split('_')
+  return { jobId, applicantId, employerId }
+}
+
+async function authorizeConversation({ jobId, applicantId, employerId, userId }) {
+  if (!jobId || !applicantId || !employerId) {
+    const err = new Error('jobId, applicantId, and employerId are required')
+    err.status = 400
+    throw err
+  }
+
+  if (![String(applicantId), String(employerId)].includes(String(userId))) {
+    const err = new Error('Not authorized')
+    err.status = 403
+    throw err
+  }
+
+  const [job, application, applicant, employer] = await Promise.all([
+    Job.findOne({ _id: jobId, postedBy: employerId }).select('title company postedBy'),
+    Application.findOne({ job: jobId, applicant: applicantId }).select('_id'),
+    User.findById(applicantId).select('name avatar role'),
+    User.findById(employerId).select('name avatar role'),
+  ])
+
+  if (!job) {
+    const err = new Error('Job not found')
+    err.status = 404
+    throw err
+  }
+  if (!application) {
+    const err = new Error('Conversation is only available for this job application')
+    err.status = 403
+    throw err
+  }
+  if (!applicant || !employer) {
+    const err = new Error('User not found')
+    err.status = 404
+    throw err
+  }
+
+  return { job, applicant, employer, conversationId: safeConvId(jobId, applicantId, employerId) }
 }
 
 // GET /api/messages/conversations — Get all conversations for the logged-in user
@@ -52,7 +97,12 @@ exports.getMessages = async (req, res) => {
     const { conversationId } = req.params
     const userId = req.user.id
 
-    const messages = await Message.find({ conversationId })
+    await authorizeConversation({ ...parseConvId(conversationId), userId })
+
+    const messages = await Message.find({
+      conversationId,
+      $or: [{ sender: userId }, { receiver: userId }]
+    })
       .populate('sender', 'name avatar')
       .populate('receiver', 'name avatar')
       .sort({ createdAt: 1 })
@@ -65,7 +115,7 @@ exports.getMessages = async (req, res) => {
 
     res.json(messages)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -104,8 +154,9 @@ exports.sendMessage = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
-    const receiverId = senderId === applicantId ? employerId : applicantId
-    const conversationId = safeConvId(jobId, applicantId, employerId)
+    const authorized = await authorizeConversation({ jobId, applicantId, employerId, userId: senderId })
+    const receiverId = String(senderId) === String(applicantId) ? employerId : applicantId
+    const conversationId = authorized.conversationId
 
     const msg = await Message.create({
       conversationId,
@@ -123,7 +174,6 @@ exports.sendMessage = async (req, res) => {
 
     // Create a notification for the receiver (fire-and-forget)
     try {
-      const job = await Job.findById(jobId).select('title company')
       const sender = await User.findById(senderId).select('name')
       await Notification.create({
         user: receiverId,
@@ -138,7 +188,7 @@ exports.sendMessage = async (req, res) => {
 
     res.status(201).json(populatedMsg)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -153,21 +203,10 @@ exports.bootstrapConversation = async (req, res) => {
       return res.status(400).json({ message: 'jobId, applicantId, and employerId are required' })
     }
 
-    // Only allow participants
-    const isParticipant = [String(applicantId), String(employerId)].includes(String(userId))
-    if (!isParticipant) return res.status(403).json({ message: 'Not authorized' })
-
-    const [job, applicant, employer] = await Promise.all([
-      Job.findById(jobId).select('title company'),
-      User.findById(applicantId).select('name avatar'),
-      User.findById(employerId).select('name avatar'),
-    ])
-
-    if (!job) return res.status(404).json({ message: 'Job not found' })
-    if (!applicant || !employer) return res.status(404).json({ message: 'User not found' })
+    const { job, applicant, employer, conversationId } = await authorizeConversation({ jobId, applicantId, employerId, userId })
 
     res.json({
-      conversationId: safeConvId(jobId, applicantId, employerId),
+      conversationId,
       job,
       applicant,
       employer,
@@ -175,6 +214,6 @@ exports.bootstrapConversation = async (req, res) => {
       unreadCount: 0,
     })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }

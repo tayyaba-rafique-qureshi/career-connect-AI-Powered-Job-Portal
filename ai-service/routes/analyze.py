@@ -15,6 +15,7 @@ No business logic lives here.  No database calls live in services/.
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel as _BaseModel
 from pymongo.database import Database
 
 from models.schemas import (
@@ -39,9 +40,28 @@ from services.recommendation_engine import get_recommendations
 from services.graph_builder import build_job_graph as _build_graph, get_starting_nodes
 from services.astar_search import run_astar
 from services.career_advisor import get_career_recommendations
+from services.skill_extractor import (
+    extract_skills_from_text,
+    normalize_skills_list,
+    calculate_skill_match,
+    get_combined_applicant_skills,
+)
 from utils.text_utils import get_skill_overlap
 
 router = APIRouter()
+
+
+# ── Utility: recursively stringify ObjectIds ──────────────────────────────────
+
+def _stringify_ids(obj):
+    """Recursively convert any ObjectId values to strings so Pydantic can serialize them."""
+    if isinstance(obj, dict):
+        return {k: _stringify_ids(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_stringify_ids(i) for i in obj]
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    return obj
 
 
 # ── Dependency helper ─────────────────────────────────────────────────────────
@@ -399,7 +419,7 @@ async def search(payload: SearchRequest, db: Database = Depends(get_db)):
     )
 
     return SearchResponse(
-        found=result["found"],
+        found=_stringify_ids(result["found"]),
         score=result["score"],
         steps=result["steps"],
         explored=result["explored"],
@@ -476,7 +496,7 @@ async def astar_search(payload: SearchRequest, db: Database = Depends(get_db)):
         f"A* explored {explored}/{total_nodes} nodes ({pct}% efficient)"
     )
 
-    return result
+    return _stringify_ids(result)
 
 
 # ── GET /career-advice/{applicant_id}/{job_id} ────────────────────────────────
@@ -550,7 +570,6 @@ async def career_advice(
 # ── POST /debug-skills ────────────────────────────────────────────────────────
 # DEBUG ENDPOINT — remove before production
 
-from pydantic import BaseModel as _BaseModel
 from services.skill_extractor import (
     extract_skills_from_text,
     normalize_skills_list,
