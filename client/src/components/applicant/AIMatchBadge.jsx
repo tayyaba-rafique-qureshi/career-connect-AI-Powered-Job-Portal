@@ -13,9 +13,9 @@ export default function AIMatchBadge({ score, size = 'sm' }) {
     : 'gray'
 
   const palette = {
-    green:  { bg: '#E7F5E8', color: '#137333', label: 'Great match!' },
-    yellow: { bg: '#FFF4E0', color: '#B45309', label: 'Good match' },
-    gray:   { bg: '#F0F0F0', color: '#767676', label: 'Partial match' },
+    green:  { bg: 'var(--cc-green-bg)', color: 'var(--cc-green)', label: 'Great match!' },
+    yellow: { bg: 'var(--cc-amber-bg)', color: 'var(--cc-amber)', label: 'Good match' },
+    gray:   { bg: 'var(--cc-surface-2)', color: 'var(--cc-text-3)', label: 'Partial match' },
   }[tier]
 
   /* ── Small pill (used in job cards) ── */

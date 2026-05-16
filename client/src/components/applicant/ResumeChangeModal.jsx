@@ -73,27 +73,28 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
 
       {/* Modal */}
       <div style={{
-        position: 'relative', backgroundColor: 'white',
-        borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-        width: '100%', maxWidth: '480px', zIndex: 10, overflow: 'hidden',
+        position: 'relative', backgroundColor: 'var(--cc-surface)',
+        borderRadius: '10px', boxShadow: 'var(--cc-shadow-lg)',
+        border: '1px solid var(--cc-border)',
+        width: '100%', maxWidth: '460px', maxHeight: '86vh', zIndex: 10, overflow: 'hidden',
       }}>
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 24px 16px', borderBottom: '1px solid #E4E2E0',
+          padding: '16px 20px 14px', borderBottom: '1px solid var(--cc-border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '36px', height: '36px', borderRadius: '8px',
-              backgroundColor: '#EDF3FC', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'var(--cc-blue-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <FileText size={18} color="#2557A7" />
+              <FileText size={18} color="var(--cc-blue)" />
             </div>
             <div>
-              <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A2E', margin: 0 }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--cc-text-1)', margin: 0 }}>
                 Update Resume
               </h2>
-              <p style={{ fontSize: '12px', color: '#767676', margin: 0 }}>
+              <p style={{ fontSize: '12px', color: 'var(--cc-text-3)', margin: 0 }}>
                 PDF only · Max 2 MB
               </p>
             </div>
@@ -101,16 +102,16 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
           <button onClick={onClose} style={{
             width: '32px', height: '32px', borderRadius: '50%',
             border: 'none', backgroundColor: 'transparent', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#595959',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cc-text-3)',
           }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F0F0F0'}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--cc-surface-2)'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding: '18px 20px', overflowY: 'auto', maxHeight: 'calc(86vh - 132px)' }}>
           {done ? (
             /* Success state */
             <div style={{
@@ -121,7 +122,7 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
               <p style={{ fontSize: '16px', fontWeight: '600', color: '#137333', margin: 0 }}>
                 Resume updated!
               </p>
-              <p style={{ fontSize: '13px', color: '#595959', margin: 0 }}>
+              <p style={{ fontSize: '13px', color: 'var(--cc-text-2)', margin: 0 }}>
                 Your new resume has been saved and processed.
               </p>
             </div>
@@ -137,24 +138,24 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
                   style={{
                     border: `2px dashed ${dragging ? '#2557A7' : error ? '#D93025' : '#D4D2D0'}`,
                     borderRadius: '10px',
-                    padding: '40px 24px',
+                    padding: '28px 20px',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    backgroundColor: dragging ? '#EDF3FC' : '#FAFAFA',
+                    backgroundColor: dragging ? 'var(--cc-blue-light)' : 'var(--cc-surface-2)',
                     transition: 'all 0.15s',
                     marginBottom: '16px',
                   }}
                 >
                   <Upload size={32} color={dragging ? '#2557A7' : '#A0A0A0'} style={{ margin: '0 auto 12px', display: 'block' }} />
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: '#2D2D2D', margin: '0 0 4px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '0 0 4px' }}>
                     Drag & drop your resume here
                   </p>
-                  <p style={{ fontSize: '13px', color: '#767676', margin: '0 0 16px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--cc-text-3)', margin: '0 0 12px' }}>
                     or click to browse
                   </p>
                   <span style={{
                     display: 'inline-block', padding: '8px 20px',
-                    backgroundColor: '#2557A7', color: 'white',
+                    backgroundColor: 'var(--cc-blue)', color: 'var(--cc-text-4)',
                     borderRadius: '6px', fontSize: '13px', fontWeight: '600',
                   }}>
                     Browse files
@@ -169,16 +170,16 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
                 /* File selected */
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
-                  border: '1px solid #A8D5AD', borderRadius: '10px',
-                  padding: '14px 16px', backgroundColor: '#F0FBF0',
+                  border: '1px solid var(--cc-green-border)', borderRadius: '10px',
+                  padding: '12px 14px', backgroundColor: 'var(--cc-green-bg)',
                   marginBottom: '16px',
                 }}>
                   <FileText size={28} color="#137333" />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A2E', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--cc-text-1)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {file.name}
                     </p>
-                    <p style={{ fontSize: '12px', color: '#595959', margin: 0 }}>
+                    <p style={{ fontSize: '12px', color: 'var(--cc-text-3)', margin: 0 }}>
                       {formatSize(file.size)}
                     </p>
                   </div>
@@ -211,12 +212,12 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
 
               {/* Info note */}
               <div style={{
-                padding: '10px 14px', backgroundColor: '#F0F7FF',
-                border: '1px solid #C5D8FA', borderRadius: '6px',
-                marginBottom: '20px',
+                padding: '10px 14px', backgroundColor: 'var(--cc-blue-light)',
+                border: '1px solid var(--cc-blue-border)', borderRadius: '6px',
+                marginBottom: '14px',
               }}>
                 <p style={{ fontSize: '12px', color: '#2557A7', margin: 0, lineHeight: 1.5 }}>
-                  🤖 Your new resume will be automatically processed by AI to update your match scores and skill analysis.
+                  Your new resume will be processed to update match scores and skill analysis.
                 </p>
               </div>
             </>
@@ -227,17 +228,17 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
         {!done && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px',
-            padding: '16px 24px', borderTop: '1px solid #E4E2E0',
+            padding: '14px 20px', borderTop: '1px solid var(--cc-border)',
           }}>
             <button onClick={onClose} style={{
               padding: '0 20px', height: '40px',
-              border: '1px solid #D4D2D0', borderRadius: '6px',
-              backgroundColor: 'white', color: '#595959',
+              border: '1px solid var(--cc-border)', borderRadius: '6px',
+              backgroundColor: 'var(--cc-surface)', color: 'var(--cc-text-2)',
               fontSize: '14px', fontWeight: '500', cursor: 'pointer',
               transition: 'background 0.1s',
             }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F7F7F7'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'white'}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--cc-surface-2)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--cc-surface)'}
             >
               Cancel
             </button>
@@ -246,8 +247,8 @@ export default function ResumeChangeModal({ onClose, onSuccess }) {
               disabled={!file || uploading}
               style={{
                 padding: '0 24px', height: '40px',
-                backgroundColor: !file || uploading ? '#A0B8E8' : '#2557A7',
-                color: 'white', border: 'none', borderRadius: '6px',
+                backgroundColor: !file || uploading ? 'var(--cc-blue-border)' : 'var(--cc-blue)',
+                color: 'var(--cc-text-4)', border: 'none', borderRadius: '6px',
                 fontSize: '14px', fontWeight: '600',
                 cursor: !file || uploading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: '8px',

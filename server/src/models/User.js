@@ -25,17 +25,53 @@ const applicantProfileSchema = new mongoose.Schema({
     careerGoals:        String
   },
   resume: {
-    fileId:        { type: mongoose.Schema.Types.ObjectId },
-    fileName:      String,
-    uploadedAt:    Date,
-    rawText:       String,
-    originalSize:  Number,   // bytes before compression
-    storedSize:    Number,   // bytes after compression
-    wasCompressed: Boolean   // whether compression reduced size
+    fileId:          { type: mongoose.Schema.Types.ObjectId },
+    fileName:        String,
+    uploadedAt:      Date,
+    rawText:         String,   // active text used by AI matching (switches with aiPreference)
+    uploadedRawText: String,   // preserved text from uploaded PDF — never overwritten
+    builtRawText:    String,   // text generated from CareerCONNECT resume builder
+    aiPreference:    { type: String, enum: ['uploaded', 'built'], default: 'uploaded' },
+    originalSize:    Number,   // bytes before compression
+    storedSize:      Number,   // bytes after compression
+    wasCompressed:   Boolean   // whether compression reduced size
   },
   profileSummary: String,
   linkedinUrl:    String,
   portfolioUrl:   String
+}, { _id: false })
+
+// ---------- Resume Builder sub-schemas ----------
+const resumeExpSchema = new mongoose.Schema({
+  jobTitle: String, company: String,
+  startDate: String, endDate: String,
+  current: { type: Boolean, default: false },
+  bullets: [String]
+}, { _id: true })
+
+const resumeProjectSchema = new mongoose.Schema({
+  name: String, techStack: String, description: String, link: String
+}, { _id: true })
+
+const resumeEduSchema = new mongoose.Schema({
+  degree: String, institution: String, year: String, cgpa: String
+}, { _id: true })
+
+const resumeCertSchema = new mongoose.Schema({
+  name: String, issuer: String, year: String
+}, { _id: true })
+
+const resumeDataSchema = new mongoose.Schema({
+  fullName: String, email: String, phone: String,
+  linkedin: String, location: String,
+  summary:        String,
+  accentColor:    String,
+  skills:         [String],
+  workExperience: [resumeExpSchema],
+  projects:       [resumeProjectSchema],
+  education:      [resumeEduSchema],
+  certifications: [resumeCertSchema],
+  lastSaved:      Date
 }, { _id: false })
 
 // ---------- Employer sub-schemas ----------
@@ -68,6 +104,7 @@ const userSchema = new mongoose.Schema({
   onboardingComplete: { type: Boolean, default: false },
   onboardingStep:     { type: Number, default: 0 },
   applicantProfile:   applicantProfileSchema,
+  resumeData:         resumeDataSchema,
   employerProfile:    employerProfileSchema,
   // Admin fields
   isBanned:    { type: Boolean, default: false },

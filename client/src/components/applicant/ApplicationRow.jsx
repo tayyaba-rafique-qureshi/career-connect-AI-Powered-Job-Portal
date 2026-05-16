@@ -5,12 +5,12 @@ import { useAuth } from '../../context/AuthContext'
 import AIMatchBadge from './AIMatchBadge'
 
 const STATUS_STYLES = {
-  pending:     'bg-blue-50 text-blue-700 border-blue-200',
-  reviewed:    'bg-yellow-50 text-yellow-700 border-yellow-200',
-  shortlisted: 'bg-purple-50 text-purple-700 border-purple-200',
-  accepted:    'bg-green-50 text-green-700 border-green-200',
-  rejected:    'bg-red-50 text-red-600 border-red-200',
-  archived:    'bg-gray-50 text-gray-500 border-gray-200',
+  pending:     { backgroundColor: 'var(--cc-blue-light)', color: 'var(--cc-blue)', borderColor: 'var(--cc-blue-border)' },
+  reviewed:    { backgroundColor: 'var(--cc-amber-bg)', color: 'var(--cc-amber)', borderColor: 'var(--cc-amber)' },
+  shortlisted: { backgroundColor: 'var(--cc-blue-light)', color: 'var(--cc-blue)', borderColor: 'var(--cc-blue-border)' },
+  accepted:    { backgroundColor: 'var(--cc-green-bg)', color: 'var(--cc-green)', borderColor: 'var(--cc-green-border)' },
+  rejected:    { backgroundColor: 'var(--cc-red-bg)', color: 'var(--cc-red)', borderColor: 'var(--cc-red)' },
+  archived:    { backgroundColor: 'var(--cc-surface-2)', color: 'var(--cc-text-3)', borderColor: 'var(--cc-border)' },
 }
 
 const STATUS_LABELS = {
@@ -60,17 +60,17 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
   }
 
   return (
-    <div className="flex items-center gap-4 p-4 border-b border-[#D4D2D0] hover:bg-gray-50 transition-colors">
+    <div className="flex items-center gap-4 p-4 border-b border-[var(--cc-border)] hover:bg-[var(--cc-surface-2)] transition-colors">
       {/* Company logo placeholder */}
-      <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-[#2557A7] font-bold text-sm shrink-0">
+      <div className="w-12 h-12 rounded-lg bg-[var(--cc-blue-light)] flex items-center justify-center text-[var(--cc-blue)] font-bold text-sm shrink-0">
         {(job.company || 'C').slice(0, 2).toUpperCase()}
       </div>
 
       {/* Job info */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-[#1A1A2E] text-sm truncate">{job.title || 'Unknown Job'}</h3>
-        <p className="text-sm text-[#595959]">{job.company}</p>
-        <p className="text-xs text-[#595959] mt-0.5">Applied on {formatDate(application.appliedAt || application.createdAt)}</p>
+        <h3 className="font-semibold text-[var(--cc-text-1)] text-sm truncate">{job.title || 'Unknown Job'}</h3>
+        <p className="text-sm text-[var(--cc-text-2)]">{job.company}</p>
+        <p className="text-xs text-[var(--cc-text-2)] mt-0.5">Applied on {formatDate(application.appliedAt || application.createdAt)}</p>
       </div>
 
       {/* Status + score + archive */}
@@ -78,7 +78,7 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
         {employerId && (
           <Link
             to={`/messages?jobId=${job._id}&applicantId=${user?.id || user?._id}&employerId=${employerId}`}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-[#595959] hover:text-[#2557A7] hover:bg-blue-50 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-[var(--cc-text-2)] hover:text-[var(--cc-blue)] hover:bg-[var(--cc-blue-light)] rounded transition-colors"
             title="Message employer"
           >
             <MessageSquare size={13} />
@@ -88,7 +88,7 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
         {application.aiScore !== null && application.aiScore !== undefined && (
           <AIMatchBadge score={Math.round(application.aiScore * 100)} />
         )}
-        <span className={`text-xs px-2.5 py-1 rounded-full border font-semibold ${STATUS_STYLES[status]}`}>
+        <span className="text-xs px-2.5 py-1 rounded-full border font-semibold" style={STATUS_STYLES[status]}>
           {STATUS_LABELS[status]}
         </span>
         {onArchive && status !== 'archived' && (
@@ -96,7 +96,7 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
             onClick={handleArchive}
             disabled={archiving}
             title="Archive application"
-            className="flex items-center gap-1 px-2 py-1 text-xs text-[#595959] hover:text-[#2557A7] hover:bg-blue-50 rounded transition-colors disabled:opacity-40"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-[var(--cc-text-2)] hover:text-[var(--cc-blue)] hover:bg-[var(--cc-blue-light)] rounded transition-colors disabled:opacity-40"
           >
             <Archive size={13} />
             {archiving ? '...' : 'Archive'}
@@ -107,7 +107,7 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
             onClick={handleUnarchive}
             disabled={unarchiving}
             title="Unarchive application"
-            className="flex items-center gap-1 px-2 py-1 text-xs text-[#595959] hover:text-[#137333] hover:bg-green-50 rounded transition-colors disabled:opacity-40"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-[var(--cc-text-2)] hover:text-[var(--cc-green)] hover:bg-[var(--cc-green-bg)] rounded transition-colors disabled:opacity-40"
           >
             <RefreshCw size={13} />
             {unarchiving ? '...' : 'Unarchive'}
