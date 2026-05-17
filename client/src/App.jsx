@@ -15,12 +15,9 @@ import EmployerOnboarding from './pages/onboarding/EmployerOnboarding'
 import PostJob from './pages/employer/PostJob'
 import EmployerMyJobs from './pages/employer/MyJobs'
 import JobApplicants from './pages/employer/JobApplicants'
-<<<<<<< HEAD
 // Payment pages (no auth wrapper — user returns from external redirect)
 import PaymentSuccess from './pages/recruiter/PaymentSuccess'
 import PaymentCancel from './pages/recruiter/PaymentCancel'
-=======
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 // Applicant pages
 import ApplicantDashboard from './pages/applicant/ApplicantDashboard'
 import ApplicantMyJobs from './pages/applicant/MyJobs'
@@ -164,13 +161,10 @@ export default function App() {
         <Route path="/onboarding/applicant" element={<OnboardingRoute><ApplicantOnboarding /></OnboardingRoute>} />
         <Route path="/onboarding/employer"  element={<OnboardingRoute><EmployerOnboarding /></OnboardingRoute>} />
 
-<<<<<<< HEAD
         {/* ── Payment (no auth wrapper — returning from external gateway) ── */}
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel"  element={<PaymentCancel />} />
 
-=======
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
         {/* ── Auth ── */}
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/login"            element={<GuestRoute><Login /></GuestRoute>} />

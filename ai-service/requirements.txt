@@ -2,18 +2,7 @@ fastapi>=0.119.0
 uvicorn>=0.34.0
 pydantic>=2.11.0
 numpy>=1.26.4
-<<<<<<< HEAD
 scikit-learn>=1.3.0
-=======
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
-pdfplumber>=0.11.9
-pymongo>=4.10.0
-python-multipart>=0.0.20
-python-dotenv>=1.0.1
-<<<<<<< HEAD
-httpx>=0.27.0
-=======
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
 # Semantic similarity (optional — service falls back to TF-IDF if unavailable)
 sentence-transformers>=2.7.0

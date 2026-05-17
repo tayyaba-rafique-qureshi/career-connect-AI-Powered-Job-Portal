@@ -32,18 +32,11 @@ const deleteOldResume = async (fileId) => {
 const extractResumeText = async (fileId) => {
   try {
     const { data } = await axios.post(
-<<<<<<< HEAD
       `${process.env.AI_SERVICE_URL}/api/ai/extract-resume`,
       { file_id: fileId.toString() },   // field name must match Python ExtractRequest schema
       { timeout: 30000 }
     )
     // Python returns { success, message, characterCount, preview, extractedText }
-=======
-      `${process.env.AI_SERVICE_URL}/api/extract-resume`,
-      { fileId: fileId.toString() },
-      { timeout: 30000 }
-    )
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     return data.extractedText || ''
   } catch (err) {
     console.error('[AI] Resume extraction failed:', err.message)
