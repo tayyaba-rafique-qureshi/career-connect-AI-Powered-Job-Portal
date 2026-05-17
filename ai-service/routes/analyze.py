@@ -142,25 +142,13 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
       5. Compute skill overlap (matched / missing).
       6. Return MatchResponse.
 
-    Returns 400 if the applicant has no resume text.
+    Gracefully handles applicants with no resume text — the matching engine
+    falls back to skill-list comparison when resume text is absent.
     """
     print(f"[/match] applicant_id={payload.applicant_id}  job_id={payload.job_id}")
 
     applicant = _get_applicant(db, payload.applicant_id)
     job       = _get_job(db, payload.job_id)
-
-    # ── Resume text — required for a meaningful score ─────────────────────────
-    resume_text: str = (
-        applicant.get("applicantProfile", {})
-        .get("resume", {})
-        .get("rawText", "")
-        or ""
-    )
-    if not resume_text.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Applicant has no resume text. Please upload and extract a resume first.",
-        )
 
     # ── Delegate all scoring to the matching engine ───────────────────────────
     result = calculate_match_score(applicant_data=applicant, job_data=job)

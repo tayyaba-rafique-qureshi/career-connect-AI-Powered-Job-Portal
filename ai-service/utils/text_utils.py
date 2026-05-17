@@ -78,9 +78,9 @@ def clean_text(text: str) -> str:
     #    fragments) but keep alphanumeric tokens like "python3" or "es6"
     text = re.sub(r"\b\d+\b", " ", text)
 
-    # 4. Remove punctuation except . + # (preserved for technical terms)
-    #    Build a translation table for all punctuation chars except those three
-    safe_chars = set(".+#")
+    # 4. Remove punctuation except . + # _ (preserved for technical terms and
+    #    placeholders like __CPP__, __CSHARP__, __DOTNET__ which use underscores)
+    safe_chars = set(".+#_")
     strip_chars = "".join(c for c in string.punctuation if c not in safe_chars)
     text = text.translate(str.maketrans(strip_chars, " " * len(strip_chars)))
 
