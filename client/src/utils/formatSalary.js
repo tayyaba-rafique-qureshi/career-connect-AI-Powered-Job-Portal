@@ -3,10 +3,17 @@
  * @param {number|null} min
  * @param {number|null} max
  * @param {string} type - 'yearly' | 'monthly' | 'stipend'
+<<<<<<< HEAD
  * @returns {string|null}
  */
 export function formatSalary(min, max, type = 'yearly') {
   if (!min && !max) return null
+=======
+ * @returns {string}
+ */
+export function formatSalary(min, max, type = 'yearly') {
+  if (!min && !max) return ''
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
   const fmt = (n) => `Rs ${Number(n).toLocaleString()}`
 

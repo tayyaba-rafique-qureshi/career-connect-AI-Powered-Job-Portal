@@ -475,6 +475,10 @@ const getAllJobsAdmin = async (req, res) => {
       workMode,
       experienceLevel,
       isFeatured,
+<<<<<<< HEAD
+      jobId,
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc'
@@ -487,6 +491,12 @@ const getAllJobsAdmin = async (req, res) => {
     if (isFeatured !== undefined && isFeatured !== '') {
       query.isFeatured = isFeatured === 'true'
     }
+<<<<<<< HEAD
+    if (jobId && isValidObjectId(jobId)) {
+      query._id = jobId
+    }
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -1130,6 +1140,19 @@ const getJobReports = async (req, res) => {
 
 /**
  * PATCH /api/admin/jobs/:jobId/reports/:reportId/resolve
+<<<<<<< HEAD
+ * Resolve a job report (from Report collection)
+ */
+const resolveJobReport = async (req, res) => {
+  try {
+    const Report = require('../models/Report')
+    const { resolution, action } = req.body
+    const { reportId } = req.params
+
+    if (!validateId(reportId, res)) return
+
+    const report = await Report.findById(reportId).populate('job', 'title company')
+=======
  * Resolve a job report
  */
 const resolveJobReport = async (req, res) => {
@@ -1145,29 +1168,65 @@ const resolveJobReport = async (req, res) => {
     }
 
     const report = job.adminReports.id(reportId)
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found' })
     }
 
+<<<<<<< HEAD
+    // Set status based on action
+    report.status = action === 'dismiss' ? 'dismissed' : 'resolved'
+    report.resolved = true
+    
+    console.log('[resolveJobReport] Setting status to:', report.status)
+    
+    // Update description with resolution notes
+    if (resolution) {
+      report.description = report.description 
+        ? `${report.description}\n\nResolution: ${resolution}` 
+        : `Resolution: ${resolution}`
+    }
+    
+    await report.save()
+    
+    console.log('[resolveJobReport] Report saved with status:', report.status)
+=======
     report.status = action === 'dismiss' ? 'dismissed' : 'resolved'
     report.resolution = resolution
     report.resolvedBy = req.user.id
     report.resolvedAt = new Date()
 
     await job.save()
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     await logAdminAction(
       req.user.id,
       'JOB_REPORT_RESOLVED',
+<<<<<<< HEAD
+      'report',
+      report._id,
+      { 
+        jobId: report.job?._id,
+        jobTitle: report.job?.title,
+        action, 
+        resolution 
+      }
+=======
       'job',
       job._id,
       { reportId, action, resolution }
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     )
 
     res.json({
       success: true,
+<<<<<<< HEAD
+      message: `Report ${action === 'dismiss' ? 'dismissed' : 'resolved'} successfully`,
+      data: report
+=======
       message: 'Report resolved successfully',
       data: job
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     })
   } catch (error) {
     console.error('Error resolving job report:', error)
@@ -1177,6 +1236,153 @@ const resolveJobReport = async (req, res) => {
 
 /**
  * GET /api/admin/job-reports
+<<<<<<< HEAD
+ * Get all job reports with filters (from Report collection)
+ */
+const getAllJobReports = async (req, res) => {
+  try {
+    const Report = require('../models/Report')
+    const { page = 1, limit = 10, status } = req.query
+
+    console.log('[getAllJobReports] Requested status:', status)
+
+    // Build query - use status field directly, with fallback for old reports
+    const query = {}
+    if (status) {
+      if (status === 'open') {
+        // Open means pending or open status, OR old reports without status that aren't resolved
+        query.$or = [
+          { status: { $in: ['pending', 'open'] } },
+          { status: { $exists: false }, resolved: { $ne: true } },
+          { status: null, resolved: { $ne: true } }
+        ]
+      } else if (status === 'resolved') {
+        // Resolved means status='resolved' OR old reports with resolved=true
+        query.$or = [
+          { status: 'resolved' },
+          { status: { $exists: false }, resolved: true },
+          { status: null, resolved: true }
+        ]
+      } else if (status === 'dismissed') {
+        // Dismissed only matches status='dismissed' (no old equivalent)
+        query.status = 'dismissed'
+      } else {
+        query.status = status
+      }
+    }
+
+    console.log('[getAllJobReports] Query:', JSON.stringify(query))
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    // Get reports with populated job and user data
+    const reports = await Report.find(query)
+      .populate('job', 'title company location status')
+      .populate('reportedBy', 'name email avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+
+    console.log('[getAllJobReports] Found reports:', reports.length)
+    console.log('[getAllJobReports] Report statuses:', reports.map(r => r.status))
+    
+    // Log details about each report for debugging
+    reports.forEach((r, idx) => {
+      console.log(`[getAllJobReports] Report ${idx + 1}:`, {
+        id: r._id,
+        status: r.status,
+        hasJob: r.job !== null,
+        hasReporter: r.reportedBy !== null,
+        jobId: r.job?._id,
+        reporterId: r.reportedBy?._id
+      })
+    })
+
+    // Filter out reports where job or reporter was deleted
+    // For now, show reports even if reporter is deleted (show as "Deleted User")
+    const validReports = reports.filter(r => r.job !== null)  // Only filter out deleted jobs
+
+    console.log('[getAllJobReports] Valid reports after filtering:', validReports.length)
+
+    // Get total count (excluding deleted jobs and reporters)
+    // Use the same query logic for consistency
+    const countQuery = {}
+    if (status) {
+      if (status === 'open') {
+        countQuery.$or = [
+          { status: { $in: ['pending', 'open'] } },
+          { status: { $exists: false }, resolved: { $ne: true } },
+          { status: null, resolved: { $ne: true } }
+        ]
+      } else if (status === 'resolved') {
+        countQuery.$or = [
+          { status: 'resolved' },
+          { status: { $exists: false }, resolved: true },
+          { status: null, resolved: true }
+        ]
+      } else if (status === 'dismissed') {
+        countQuery.status = 'dismissed'
+      } else {
+        countQuery.status = status
+      }
+    }
+    
+    const allReports = await Report.find(countQuery)
+      .populate('job', '_id')
+      .populate('reportedBy', '_id')
+    const totalValid = allReports.filter(r => r.job !== null).length  // Only filter deleted jobs
+
+    // Transform to match expected format
+    const transformedReports = validReports.map(report => {
+      // Extract resolution from description if it exists
+      let notes = report.description
+      let resolution = null
+      
+      if (report.description && report.description.includes('\n\nResolution: ')) {
+        const parts = report.description.split('\n\nResolution: ')
+        notes = parts[0]
+        resolution = parts[1]
+      } else if (report.description && report.description.startsWith('Resolution: ')) {
+        resolution = report.description.replace('Resolution: ', '')
+        notes = ''
+      }
+      
+      // Determine status - handle old reports without status field
+      let reportStatus = report.status
+      if (!reportStatus) {
+        // Fallback for old reports
+        reportStatus = report.resolved ? 'resolved' : 'pending'
+      }
+      
+      return {
+        _id: report._id,
+        jobId: report.job._id,
+        title: report.job.title,
+        company: report.job.company,
+        report: {
+          _id: report._id,
+          reason: report.reason,
+          description: report.description,
+          reportedAt: report.createdAt,
+          status: reportStatus,
+          notes: notes,
+          resolution: resolution,
+          category: report.reason.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, ''),
+          severity: 'medium' // Default severity
+        },
+        reportedBy: report.reportedBy || { name: '[Deleted User]', email: '', _id: null }
+      }
+    })
+
+    res.json({
+      success: true,
+      data: transformedReports,
+      pagination: {
+        total: totalValid,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(totalValid / parseInt(limit))
+=======
  * Get all job reports with filters
  */
 const getAllJobReports = async (req, res) => {
@@ -1240,6 +1446,7 @@ const getAllJobReports = async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         pages: Math.ceil(total / parseInt(limit))
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       }
     })
   } catch (error) {

@@ -15,6 +15,10 @@ No business logic lives here.  No database calls live in services/.
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
+<<<<<<< HEAD
+=======
+from pydantic import BaseModel as _BaseModel
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 from pymongo.database import Database
 
 from models.schemas import (
@@ -39,6 +43,15 @@ from services.recommendation_engine import get_recommendations
 from services.graph_builder import build_job_graph as _build_graph, get_starting_nodes
 from services.astar_search import run_astar
 from services.career_advisor import get_career_recommendations
+<<<<<<< HEAD
+=======
+from services.skill_extractor import (
+    extract_skills_from_text,
+    normalize_skills_list,
+    calculate_skill_match,
+    get_combined_applicant_skills,
+)
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 from utils.text_utils import get_skill_overlap
 
 router = APIRouter()
@@ -57,7 +70,10 @@ def _stringify_ids(obj):
     return obj
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 # ── Dependency helper ─────────────────────────────────────────────────────────
 
 def get_db() -> Database:
@@ -150,6 +166,15 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
         .get("rawText", "")
         or ""
     )
+<<<<<<< HEAD
+=======
+    if not resume_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Applicant has no resume text. Please upload and extract a resume first.",
+        )
+
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     # ── Delegate all scoring to the matching engine ───────────────────────────
     result = calculate_match_score(applicant_data=applicant, job_data=job)
 
@@ -558,7 +583,10 @@ async def career_advice(
 # ── POST /debug-skills ────────────────────────────────────────────────────────
 # DEBUG ENDPOINT — remove before production
 
+<<<<<<< HEAD
 from pydantic import BaseModel as _BaseModel
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 from services.skill_extractor import (
     extract_skills_from_text,
     normalize_skills_list,

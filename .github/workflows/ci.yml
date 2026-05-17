@@ -14,6 +14,7 @@ jobs:
 
     env:
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
+<<<<<<< HEAD
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-jwt-secret' }}
       AI_SERVICE_URL: http://localhost:8000
       CLIENT_URL: http://localhost:3001
@@ -22,6 +23,16 @@ jobs:
       MAIL_FROM: CareerConnect CI
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'ci-test-client-id' }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'ci-test-client-secret' }}
+=======
+      JWT_SECRET: test_jwt_secret_for_ci
+      AI_SERVICE_URL: http://localhost:8000
+      CLIENT_URL: http://localhost:3001
+      GMAIL_USER: test@test.com
+      GMAIL_APP_PASSWORD: testpassword
+      MAIL_FROM: CareerConnect <test@test.com>
+      GOOGLE_CLIENT_ID: test_client_id
+      GOOGLE_CLIENT_SECRET: test_client_secret
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     steps:
       - name: Checkout code
@@ -30,7 +41,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+<<<<<<< HEAD
           node-version: '20'
+=======
+          node-version: '18'
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
 
@@ -46,7 +61,10 @@ jobs:
         if: ${{ env.MONGODB_URI != '' }}
         run: npx jest tests/auth.test.js tests/jobs.test.js --runInBand --forceExit --testTimeout=30000
         working-directory: server
+<<<<<<< HEAD
         continue-on-error: true
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
   # ── Job 2: Frontend (React/Vite) Tests ─────────────────────────────────────
   frontend-tests:
@@ -60,12 +78,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+<<<<<<< HEAD
           node-version: '20'
 
       - name: Install dependencies
         # Use npm install so npm resolves the correct platform-specific
         # native bindings for Rolldown/Vitest on Linux (package-lock was generated on Windows).
         run: npm install
+=======
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
         working-directory: client
 
       - name: Run unit tests
@@ -102,7 +129,11 @@ jobs:
         run: python -m pytest tests/ -v --tb=short
         working-directory: ai-service
 
+<<<<<<< HEAD
   # ── Job 4: Final gate (core tests only — no Selenium) ──────────────────────
+=======
+  # ── Job 4: Integration summary ─────────────────────────────────────────────
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
   all-tests-passed:
     name: All Tests Passed
     runs-on: ubuntu-latest
@@ -112,6 +143,7 @@ jobs:
     steps:
       - name: Check all jobs passed
         run: |
+<<<<<<< HEAD
           echo "backend-tests:  ${{ needs.backend-tests.result }}"
           echo "frontend-tests: ${{ needs.frontend-tests.result }}"
           echo "ai-tests:       ${{ needs.ai-tests.result }}"
@@ -129,6 +161,193 @@ jobs:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: [all-tests-passed]
+=======
+          if [[ "${{ needs.backend-tests.result }}" == "failure" || \
+                "${{ needs.frontend-tests.result }}" == "failure" || \
+                "${{ needs.ai-tests.result }}" == "failure" ]]; then
+            echo "❌ One or more test jobs failed"
+            exit 1
+          fi
+          echo "✅ All tests passed"
+
+  # ── Job 5: Selenium E2E Tests (Regression Suite) ──────────────────────────
+  selenium-e2e-tests:
+    name: Selenium E2E + Regression Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    if: success()
+
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      JWT_SECRET: test_jwt_secret_for_ci
+      AI_SERVICE_URL: http://localhost:8000
+      CLIENT_URL: http://localhost:5173
+      GMAIL_USER: test@test.com
+      GMAIL_APP_PASSWORD: testpassword
+      MAIL_FROM: CareerConnect <test@test.com>
+      GOOGLE_CLIENT_ID: test_client_id
+      GOOGLE_CLIENT_SECRET: test_client_secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Start Backend ──────────────────────────────────────────────────
+      - name: Setup Node.js for backend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Start backend server
+        run: npm start &
+        working-directory: server
+        env:
+          PORT: 5000
+
+      # ── Start Frontend ─────────────────────────────────────────────────
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Build frontend for preview
+        run: npm run build
+        working-directory: client
+        env:
+          VITE_API_BASE_URL: http://localhost:5000/api
+
+      - name: Start frontend preview server
+        run: npm run preview -- --port 5173 &
+        working-directory: client
+
+      # ── Wait for services ──────────────────────────────────────────────
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for backend (port 5000)..."
+          timeout 60 bash -c 'until curl -sf http://localhost:5000/api/health; do sleep 2; done'
+          echo "Waiting for frontend (port 5173)..."
+          timeout 60 bash -c 'until curl -sf http://localhost:5173; do sleep 2; done'
+          echo "All services ready!"
+
+      # ── Seed Admin User ────────────────────────────────────────────────
+      - name: Seed admin user
+        run: node src/scripts/createAdmin.js
+        working-directory: server
+        continue-on-error: true
+
+      # ── Setup Python and Selenium ──────────────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: tests/selenium/requirements.txt
+
+      - name: Install Selenium dependencies
+        run: pip install -r requirements.txt
+        working-directory: tests/selenium
+
+      # ── Install Chrome ─────────────────────────────────────────────────
+      - name: Setup Chrome for Selenium
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      # ── Run Smoke Tests ────────────────────────────────────────────────
+      - name: Run smoke tests
+        run: |
+          python -m pytest tests/selenium/tests/ -m "smoke" \
+            -v --tb=short \
+            --html=tests/selenium/reports/smoke_report.html \
+            --self-contained-html \
+            --timeout=30
+        env:
+          BASE_URL: http://localhost:5173
+          API_URL: http://localhost:5000/api
+          ADMIN_EMAIL: admin@careerconnect.com
+          ADMIN_PASSWORD: Admin@123
+          HEADLESS: "true"
+          BROWSER: chrome
+          SCREENSHOT_ON_FAIL: "true"
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        continue-on-error: false
+
+      # ── Run Regression Tests ───────────────────────────────────────────
+      - name: Run regression tests
+        run: |
+          python -m pytest tests/selenium/tests/ -m "regression" \
+            -v --tb=short \
+            --html=tests/selenium/reports/regression_report.html \
+            --self-contained-html \
+            --timeout=60 \
+            --reruns=2 \
+            --reruns-delay=2
+        env:
+          BASE_URL: http://localhost:5173
+          API_URL: http://localhost:5000/api
+          ADMIN_EMAIL: admin@careerconnect.com
+          ADMIN_PASSWORD: Admin@123
+          HEADLESS: "true"
+          BROWSER: chrome
+          SCREENSHOT_ON_FAIL: "true"
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        continue-on-error: true
+
+      # ── Run CRUD Tests ─────────────────────────────────────────────────
+      - name: Run CRUD tests
+        run: |
+          python -m pytest tests/selenium/tests/ -m "crud" \
+            -v --tb=short \
+            --html=tests/selenium/reports/crud_report.html \
+            --self-contained-html \
+            --timeout=60 \
+            --reruns=1
+        env:
+          BASE_URL: http://localhost:5173
+          API_URL: http://localhost:5000/api
+          ADMIN_EMAIL: admin@careerconnect.com
+          ADMIN_PASSWORD: Admin@123
+          HEADLESS: "true"
+          BROWSER: chrome
+          SCREENSHOT_ON_FAIL: "true"
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        continue-on-error: true
+
+      # ── Upload Reports ─────────────────────────────────────────────────
+      - name: Upload Selenium test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selenium-reports-${{ github.run_number }}
+          path: |
+            tests/selenium/reports/*.html
+            tests/selenium/reports/screenshots/
+          retention-days: 14
+
+      # ── Notify on Failure ──────────────────────────────────────────────
+      - name: Summarize test results
+        if: always()
+        run: |
+          echo "## Selenium Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Regression Tests | See artifacts |" >> $GITHUB_STEP_SUMMARY
+          echo "| CRUD Tests | See artifacts |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Download full HTML reports from the Artifacts section above." >> $GITHUB_STEP_SUMMARY
+
+  # ── Job 6: Deploy to Staging (only on main branch after all tests pass) ─────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [selenium-e2e-tests, all-tests-passed]
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     if: github.ref == 'refs/heads/main' && success()
     environment: staging
 
@@ -138,7 +357,11 @@ jobs:
 
       - name: Notify deployment start
         run: |
+<<<<<<< HEAD
           echo "All tests passed on main branch."
+=======
+          echo "🚀 All tests passed on main branch."
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
           echo "Deploying to staging environment..."
           echo "Branch: ${{ github.ref }}"
           echo "Commit: ${{ github.sha }}"
@@ -149,4 +372,37 @@ jobs:
       #   run: ./scripts/deploy.sh staging
 
       - name: Deployment complete
+<<<<<<< HEAD
         run: echo "Staging deployment complete"
+=======
+        run: echo "✅ Staging deployment complete. URL: https://staging.careerconnect.app"
+
+  # ── Job 7: Updated final gate ──────────────────────────────────────────────
+  all-checks-passed:
+    name: All Checks Passed (including E2E)
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, ai-tests, selenium-e2e-tests]
+    if: always()
+
+    steps:
+      - name: Evaluate all job results
+        run: |
+          echo "backend-tests:     ${{ needs.backend-tests.result }}"
+          echo "frontend-tests:    ${{ needs.frontend-tests.result }}"
+          echo "ai-tests:          ${{ needs.ai-tests.result }}"
+          echo "selenium-e2e:      ${{ needs.selenium-e2e-tests.result }}"
+          
+          if [[ "${{ needs.backend-tests.result }}" == "failure" || \
+                "${{ needs.frontend-tests.result }}" == "failure" || \
+                "${{ needs.ai-tests.result }}" == "failure" ]]; then
+            echo "❌ Core tests FAILED — merge blocked"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.selenium-e2e-tests.result }}" == "failure" ]]; then
+            echo "⚠️  Selenium smoke tests FAILED — review required"
+            exit 1
+          fi
+          
+          echo "✅ All checks passed — safe to merge"
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
