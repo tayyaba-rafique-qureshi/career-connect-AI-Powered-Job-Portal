@@ -44,6 +44,20 @@ from utils.text_utils import get_skill_overlap
 router = APIRouter()
 
 
+# ── Utility: recursively stringify ObjectIds ──────────────────────────────────
+
+def _stringify_ids(obj):
+    """Recursively convert any ObjectId values to strings so Pydantic can serialize them."""
+    if isinstance(obj, dict):
+        return {k: _stringify_ids(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_stringify_ids(i) for i in obj]
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    return obj
+
+
+
 # ── Dependency helper ─────────────────────────────────────────────────────────
 
 def get_db() -> Database:
@@ -393,7 +407,7 @@ async def search(payload: SearchRequest, db: Database = Depends(get_db)):
     )
 
     return SearchResponse(
-        found=result["found"],
+        found=_stringify_ids(result["found"]),
         score=result["score"],
         steps=result["steps"],
         explored=result["explored"],
@@ -470,7 +484,7 @@ async def astar_search(payload: SearchRequest, db: Database = Depends(get_db)):
         f"A* explored {explored}/{total_nodes} nodes ({pct}% efficient)"
     )
 
-    return result
+    return _stringify_ids(result)
 
 
 # ── GET /career-advice/{applicant_id}/{job_id} ────────────────────────────────
