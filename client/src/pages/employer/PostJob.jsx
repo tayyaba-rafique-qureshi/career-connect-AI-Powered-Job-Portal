@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import EmployerLayout from '../../components/employer/EmployerLayout'
 import TagInput from '../../components/onboarding/TagInput'
 import Toast from '../../components/employer/Toast'
+import NoCreditsModal from '../../components/recruiter/NoCreditsModal'
 import api from '../../services/api'
 import {
   Briefcase, MapPin, Users, Monitor, FileText, Building2,
@@ -42,6 +43,8 @@ export default function PostJob() {
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast]     = useState(null)
   const [errors, setErrors]   = useState({})
+  const [showNoCredits, setShowNoCredits] = useState(false)
+  const creditsBadgeRef = useRef(null)
 
   // Load existing job when editing
   useEffect(() => {
@@ -111,11 +114,19 @@ export default function PostJob() {
         await api.post('/jobs', payload)
       }
 
+      // Refresh the credits badge after a successful post (1 credit was deducted)
+      creditsBadgeRef.current?.refresh()
+
       navigate('/dashboard/recruiter/jobs', {
         state: { toast: isEdit ? 'Job updated successfully.' : status === 'active' ? 'Job posted successfully!' : 'Job saved as draft.' }
       })
     } catch (err) {
-      setToast({ message: err.response?.data?.message || 'Failed to save job. Please try again.', type: 'error' })
+      // NO_CREDITS: show the purchase modal instead of a generic error toast
+      if (err.response?.status === 403 && err.response?.data?.error === 'NO_CREDITS') {
+        setShowNoCredits(true)
+      } else {
+        setToast({ message: err.response?.data?.message || 'Failed to save job. Please try again.', type: 'error' })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -141,6 +152,7 @@ export default function PostJob() {
   return (
     <EmployerLayout>
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+      {showNoCredits && <NoCreditsModal onClose={() => setShowNoCredits(false)} />}
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1A1A2E]">
