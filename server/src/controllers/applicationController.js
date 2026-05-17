@@ -37,31 +37,6 @@ exports.applyToJob = async (req, res) => {
     // Prevent duplicate applications
     const existing = await Application.findOne({ job: job._id, applicant: req.user.id })
     if (existing) return res.status(400).json({ message: 'Already applied to this job' })
-=======
-
-    // Pull applicant profile for skill matching
-    const applicant = await User.findById(req.user.id)
-    const storedResumeText = applicant?.applicantProfile?.resume?.rawText || ''
-    const effectiveResumeText = resumeText || storedResumeText
-
-    // Compute AI score via the AI microservice using ID-based contract.
-    // matchApplicantToJob hits POST /api/ai/match with {applicant_id, job_id}
-    // and returns { matchScore (0-100), skillsMatched, skillsMissing }.
-    const aiResult = await aiService.matchApplicantToJob(req.user.id, job._id.toString())
-    // Convert 0-100 to 0-1 to match the existing Application.aiScore convention.
-    const aiScore = aiResult.matchScore != null ? aiResult.matchScore / 100 : null
-
-    // Use AI-service skill computation if available, otherwise fall back to local compute.
-    const applicantSkillList = (applicant?.applicantProfile?.skills || [])
-      .map(s => (typeof s === 'string' ? s : s.name || '').toLowerCase())
-    const requiredSkills = job.requiredSkills || []
-    const skillsMatched = aiResult.skillsMatched.length
-      ? aiResult.skillsMatched
-      : requiredSkills.filter(s => applicantSkillList.includes(s.toLowerCase()))
-    const skillsMissing = aiResult.skillsMissing.length
-      ? aiResult.skillsMissing
-      : requiredSkills.filter(s => !applicantSkillList.includes(s.toLowerCase()))
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     // Pull applicant profile for local skill matching (fast, no AI call)
     const applicant = await User.findById(req.user.id)

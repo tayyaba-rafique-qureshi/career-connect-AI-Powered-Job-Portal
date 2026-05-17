@@ -7,6 +7,12 @@
 server/.env
 client/.env
 
+# ─── Always include README files ───────────────────────────────────────────────
+!README.md
+!**/README.md
+!README_*.md
+!**/README_*.md
+
 # ─── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
 client/node_modules/

@@ -476,6 +476,21 @@ const getAllJobsAdmin = async (req, res) => {
       experienceLevel,
       isFeatured,
       jobId,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query
+
+    const query = { deletedAt: null }
+    if (status) query.status = status
+    if (workMode) query.workMode = workMode
+    if (experienceLevel) query.experienceLevel = experienceLevel
+    if (isFeatured !== undefined && isFeatured !== '') {
+      query.isFeatured = isFeatured === 'true'
+    }
+    if (jobId && isValidObjectId(jobId)) {
+      query._id = jobId
+    }
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },

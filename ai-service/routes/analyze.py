@@ -15,9 +15,7 @@ No business logic lives here.  No database calls live in services/.
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
-=======
 from pydantic import BaseModel as _BaseModel
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 from pymongo.database import Database
 
 from models.schemas import (
@@ -45,6 +43,19 @@ from services.career_advisor import get_career_recommendations
 from utils.text_utils import get_skill_overlap
 
 router = APIRouter()
+
+
+# ── Database dependency ───────────────────────────────────────────────────────
+
+def get_db() -> Database:
+    """
+    FastAPI dependency that returns the MongoDB database instance.
+    Injected by main.py at startup via app.dependency_overrides.
+    Raises a 503 if the database is not yet available.
+    """
+    # Overridden in main.py — this body is only reached if the override
+    # was never set (e.g. during isolated unit tests).
+    raise HTTPException(status_code=503, detail="Database not available")
 
 
 # ── Utility: recursively stringify ObjectIds ──────────────────────────────────
