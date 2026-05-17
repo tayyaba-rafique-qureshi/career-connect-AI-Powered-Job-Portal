@@ -114,10 +114,10 @@ jobs:
           if [[ "${{ needs.backend-tests.result }}" == "failure" || \
                 "${{ needs.frontend-tests.result }}" == "failure" || \
                 "${{ needs.ai-tests.result }}" == "failure" ]]; then
-            echo "❌ One or more test jobs failed"
+            echo "FAILED: One or more test jobs failed"
             exit 1
           fi
-          echo "✅ All tests passed"
+          echo "PASSED: All tests passed"
 
   # ── Job 5: Selenium E2E Tests (Regression Suite) ──────────────────────────
   selenium-e2e-tests:
@@ -332,17 +332,17 @@ jobs:
           echo "frontend-tests:    ${{ needs.frontend-tests.result }}"
           echo "ai-tests:          ${{ needs.ai-tests.result }}"
           echo "selenium-e2e:      ${{ needs.selenium-e2e-tests.result }}"
-          
+
           if [[ "${{ needs.backend-tests.result }}" == "failure" || \
                 "${{ needs.frontend-tests.result }}" == "failure" || \
                 "${{ needs.ai-tests.result }}" == "failure" ]]; then
-            echo "❌ Core tests FAILED — merge blocked"
+            echo "FAILED: Core tests failed - merge blocked"
             exit 1
           fi
-          
+
           if [[ "${{ needs.selenium-e2e-tests.result }}" == "failure" ]]; then
-            echo "⚠️  Selenium smoke tests FAILED — review required"
+            echo "WARNING: Selenium smoke tests failed - review required"
             exit 1
           fi
-          
-          echo "✅ All checks passed — safe to merge"
+
+          echo "PASSED: All checks passed - safe to merge"
