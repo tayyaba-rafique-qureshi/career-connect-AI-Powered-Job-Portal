@@ -76,7 +76,9 @@ exports.reportJob = async (req, res) => {
       job: job._id,
       reportedBy: req.user.id,
       reason,
-      description: description || ''
+      description: description || '',
+      status: 'pending',
+      resolved: false
     })
 
     res.status(201).json({ message: 'Job reported successfully', reportId: report._id })

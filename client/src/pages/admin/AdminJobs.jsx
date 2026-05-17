@@ -22,6 +22,7 @@ const STATUS_COLORS = {
 const AdminJobs = () => {
   const [searchParams] = useSearchParams()
   const isFeaturedView = searchParams.get('featured') === 'true'
+  const jobIdFilter = searchParams.get('id') // Get job ID from URL
   const searchRef = useRef(null)
   
   const [jobs, setJobs] = useState([])
@@ -73,7 +74,7 @@ const AdminJobs = () => {
 
   useEffect(() => {
     fetchJobs()
-  }, [pagination.page, filters, isFeaturedView])
+  }, [pagination.page, filters, isFeaturedView, jobIdFilter])
 
   const fetchJobs = async () => {
     setLoading(true)
@@ -87,6 +88,11 @@ const AdminJobs = () => {
       // Add isFeatured filter if in featured view
       if (isFeaturedView) {
         params.isFeatured = 'true'
+      }
+      
+      // Add job ID filter if present in URL
+      if (jobIdFilter) {
+        params.jobId = jobIdFilter
       }
       
       const response = await getJobs(params)
