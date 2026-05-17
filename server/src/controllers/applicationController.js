@@ -37,7 +37,6 @@ exports.applyToJob = async (req, res) => {
     // Prevent duplicate applications
     const existing = await Application.findOne({ job: job._id, applicant: req.user.id })
     if (existing) return res.status(400).json({ message: 'Already applied to this job' })
-<<<<<<< HEAD
 =======
 
     // Pull applicant profile for skill matching
@@ -78,7 +77,6 @@ exports.applyToJob = async (req, res) => {
 
     // Create the application immediately — applicant does NOT wait for AI
     const application = await Application.create({
-<<<<<<< HEAD
       job:          job._id,
       applicant:    req.user.id,
       resumeText:   effectiveResumeText,
@@ -127,41 +125,6 @@ exports.applyToJob = async (req, res) => {
         if (employer) sendNewApplicationEmail({ employer, applicant, job: job.toObject() })
       }).catch(() => {})
     }
-=======
-      job: job._id,
-      applicant: req.user.id,
-      resumeText: effectiveResumeText,
-      aiScore,
-      skillsMatched,
-      skillsMissing,
-      coverLetter: coverLetter || '',
-      appliedAt: new Date()
-    })
-
-    sendApplicationConfirmEmail({ applicant, job: { ...job.toObject(), aiScore } })
-
-    if (job.postedBy) {
-      const employer = await User.findById(job.postedBy)
-      if (employer) {
-        sendNewApplicationEmail({ employer, applicant, job: { ...job.toObject(), aiScore } })
-        await Notification.create({
-          user: employer._id,
-          type: 'general',
-          title: 'New application',
-          message: `${applicant?.name || 'An applicant'} applied for ${job.title}`,
-          link: `/dashboard/recruiter/jobs/${job._id}/applicants`,
-        }).catch(() => {})
-      }
-    }
-
-    res.status(201).json({
-      applicationId: application._id,
-      message: 'Application submitted',
-      aiScore,
-      skillsMatched,
-      skillsMissing
-    })
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -250,7 +213,6 @@ exports.updateStatus = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
-<<<<<<< HEAD
     application.status = status
     await application.save()
 
@@ -259,32 +221,6 @@ exports.updateStatus = async (req, res) => {
       job: application.job,
       status
     })
-=======
-    const oldStatus = application.status
-    application.status = status
-    await application.save()
-
-    if (oldStatus !== status) {
-      sendStatusUpdateEmail({
-        applicant: application.applicant,
-        job: application.job,
-        status
-      })
-    }
-
-    // In-app notification for applicant
-    if (oldStatus !== status) try {
-      await Notification.create({
-        user: application.applicant._id,
-        type: 'status_update',
-        title: 'Application update',
-        message: `${application.job.title} at ${application.job.company}: ${status}`,
-        link: '/my-jobs?tab=applied',
-      })
-    } catch {
-      // ignore notification failures
-    }
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     // In-app notification for applicant
     try {
@@ -312,10 +248,6 @@ exports.scheduleInterview = async (req, res) => {
 
     const application = await Application.findById(req.params.id)
       .populate('job', 'title company postedBy')
-<<<<<<< HEAD
-=======
-      .populate('applicant', 'name email')
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     if (!application) return res.status(404).json({ message: 'Application not found' })
 
@@ -347,29 +279,10 @@ exports.scheduleInterview = async (req, res) => {
     application.status = 'shortlisted'
     await application.save()
 
-<<<<<<< HEAD
     // In-app notification for applicant
     try {
       await Notification.create({
         user: application.applicant,
-=======
-    sendStatusUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      status: 'shortlisted'
-    })
-    sendInterviewUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      interview: application.interview,
-      isReschedule: false
-    })
-
-    // In-app notification for applicant
-    try {
-      await Notification.create({
-        user: application.applicant._id,
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
         type: 'interview',
         title: 'Interview scheduled',
         message: `${application.job.title} at ${application.job.company}${date ? ` · ${date}` : ''}${time ? ` ${time}` : ''}`,
@@ -392,10 +305,6 @@ exports.rescheduleInterview = async (req, res) => {
 
     const application = await Application.findById(req.params.id)
       .populate('job', 'title company postedBy')
-<<<<<<< HEAD
-=======
-      .populate('applicant', 'name email')
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     if (!application) return res.status(404).json({ message: 'Application not found' })
     if (application.job.postedBy.toString() !== req.user.id) {
@@ -426,25 +335,6 @@ exports.rescheduleInterview = async (req, res) => {
     }
 
     await application.save()
-<<<<<<< HEAD
-=======
-
-    sendInterviewUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      interview: application.interview,
-      isReschedule: true
-    })
-
-    await Notification.create({
-      user: application.applicant._id,
-      type: 'interview',
-      title: 'Interview rescheduled',
-      message: `${application.job.title} at ${application.job.company}${application.interview.date ? ` Â· ${application.interview.date}` : ''}${application.interview.time ? ` ${application.interview.time}` : ''}`,
-      link: '/my-jobs?tab=interviews',
-    }).catch(() => {})
-
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     res.json(application)
   } catch (err) {
     res.status(500).json({ message: err.message })

@@ -15,7 +15,6 @@ No business logic lives here.  No database calls live in services/.
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
-<<<<<<< HEAD
 =======
 from pydantic import BaseModel as _BaseModel
 >>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
@@ -43,15 +42,6 @@ from services.recommendation_engine import get_recommendations
 from services.graph_builder import build_job_graph as _build_graph, get_starting_nodes
 from services.astar_search import run_astar
 from services.career_advisor import get_career_recommendations
-<<<<<<< HEAD
-=======
-from services.skill_extractor import (
-    extract_skills_from_text,
-    normalize_skills_list,
-    calculate_skill_match,
-    get_combined_applicant_skills,
-)
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 from utils.text_utils import get_skill_overlap
 
 router = APIRouter()
@@ -70,111 +60,7 @@ def _stringify_ids(obj):
     return obj
 
 
-<<<<<<< HEAD
 
-=======
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
-# ── Dependency helper ─────────────────────────────────────────────────────────
-
-def get_db() -> Database:
-    """
-    FastAPI dependency that returns the MongoDB database instance.
-    Injected by main.py at startup via app.dependency_overrides.
-    Raises a 503 if the database is not yet available.
-    """
-    # Overridden in main.py — this body is only reached if the override
-    # was never set (e.g. during isolated unit tests).
-    raise HTTPException(status_code=503, detail="Database not available")
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _parse_object_id(raw_id: str, label: str) -> ObjectId:
-    """
-    Convert a string to a MongoDB ObjectId, raising a 400 on bad format.
-
-    Parameters
-    ----------
-    raw_id : str   — the string to convert
-    label  : str   — human-readable name used in the error message
-    """
-    try:
-        return ObjectId(raw_id)
-    except (InvalidId, TypeError):
-        raise HTTPException(status_code=400, detail=f"Invalid {label}: '{raw_id}'")
-
-
-def _get_applicant(db: Database, applicant_id: str) -> dict:
-    """Fetch an applicant document or raise 404."""
-    oid = _parse_object_id(applicant_id, "applicant_id")
-    doc = db["users"].find_one({"_id": oid})
-    if not doc:
-        raise HTTPException(status_code=404, detail=f"Applicant '{applicant_id}' not found")
-    return doc
-
-
-def _get_job(db: Database, job_id: str) -> dict:
-    """Fetch a job document or raise 404."""
-    oid = _parse_object_id(job_id, "job_id")
-    doc = db["jobs"].find_one({"_id": oid})
-    if not doc:
-        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
-    return doc
-
-
-def _applicant_skills(applicant: dict) -> list[str]:
-    """
-    Extract a flat list of skill name strings from an applicant document.
-    Handles both the structured {name, level} format and plain strings.
-    """
-    raw = applicant.get("applicantProfile", {}).get("skills", []) or []
-    result = []
-    for s in raw:
-        if isinstance(s, dict):
-            result.append(s.get("name", ""))
-        elif isinstance(s, str):
-            result.append(s)
-    return [s for s in result if s]
-
-
-# ── POST /match ───────────────────────────────────────────────────────────────
-
-@router.post("/match")
-async def match(payload: MatchRequest, db: Database = Depends(get_db)):
-    """
-    Calculate the AI match score between an applicant and a specific job.
-
-    Steps:
-      1. Fetch applicant and job from MongoDB.
-      2. Extract resume text and skills from the applicant profile.
-      3. Preprocess both resume and job text.
-      4. Compute TF-IDF cosine similarity (0–100).
-      5. Compute skill overlap (matched / missing).
-      6. Return MatchResponse.
-
-    Returns 400 if the applicant has no resume text.
-    """
-    print(f"[/match] applicant_id={payload.applicant_id}  job_id={payload.job_id}")
-
-    applicant = _get_applicant(db, payload.applicant_id)
-    job       = _get_job(db, payload.job_id)
-
-    # ── Resume text — required for a meaningful score ─────────────────────────
-    resume_text: str = (
-        applicant.get("applicantProfile", {})
-        .get("resume", {})
-        .get("rawText", "")
-        or ""
-    )
-<<<<<<< HEAD
-=======
-    if not resume_text.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Applicant has no resume text. Please upload and extract a resume first.",
-        )
-
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     # ── Delegate all scoring to the matching engine ───────────────────────────
     result = calculate_match_score(applicant_data=applicant, job_data=job)
 
@@ -583,10 +469,7 @@ async def career_advice(
 # ── POST /debug-skills ────────────────────────────────────────────────────────
 # DEBUG ENDPOINT — remove before production
 
-<<<<<<< HEAD
 from pydantic import BaseModel as _BaseModel
-=======
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 from services.skill_extractor import (
     extract_skills_from_text,
     normalize_skills_list,

@@ -124,16 +124,12 @@ const userSchema = new mongoose.Schema({
     rejectedReason: { type: String },
     reviewedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     reviewedAt:     { type: Date }
-<<<<<<< HEAD
   },
   // Job post credits (employer/recruiter only)
   // New accounts get 3 free posts; additional credits purchased via payment gateway
   jobPostCredits: { type: Number, default: 3 },
   pendingOrderId: { type: String, default: null },
   processedPayments:  { type: [String], default: []   }
-=======
-  }
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 }, { timestamps: true })
 
 userSchema.pre('save', async function (next) {

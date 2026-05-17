@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import EmployerLayout from '../components/employer/EmployerLayout'
-<<<<<<< HEAD
 import CreditsBadge from '../components/recruiter/CreditsBadge'
 import BuyCreditsButton from '../components/recruiter/BuyCreditsButton'
 import api from '../services/api'
@@ -78,114 +77,6 @@ function CreditsCard() {
         <div className="sm:flex-shrink-0">
           <BuyCreditsButton />
         </div>
-=======
-import api from '../services/api'
-import { Briefcase, Users, PlusCircle, Eye, BarChart2 } from 'lucide-react'
-
-const scoreColor = (score) =>
-  score >= 80 ? 'bg-green-100 text-green-700' :
-  score >= 60 ? 'bg-yellow-100 text-yellow-700' :
-  'bg-red-100 text-red-700'
-
-const STATUS_STYLES = {
-  pending:     'bg-gray-100 text-gray-600',
-  reviewed:    'bg-blue-100 text-blue-700',
-  shortlisted: 'bg-green-100 text-green-700',
-  rejected:    'bg-red-100 text-red-700',
-  accepted:    'bg-emerald-100 text-emerald-700',
-}
-
-export default function RecruiterDashboard() {
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [stats, setStats]               = useState(null)
-  const [recentJobs, setRecentJobs]     = useState([])
-  const [recentApps, setRecentApps]     = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState(null)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch stats and jobs in parallel
-        const [statsRes, jobsRes] = await Promise.all([
-          api.get('/jobs/employer/stats'),
-          api.get('/jobs/employer/mine'),
-        ])
-        setStats(statsRes.data)
-        const jobs = jobsRes.data ?? []
-        setRecentJobs(jobs.slice(0, 5))
-
-        // Fetch recent applications across all jobs (up to 5 most recent)
-        if (jobs.length > 0) {
-          const appRequests = jobs.slice(0, 5).map(j =>
-            api.get(`/jobs/${j._id}/applicants`).then(r =>
-              (r.data ?? []).map(a => ({ ...a, jobTitle: j.title, jobId: j._id }))
-            ).catch(() => [])
-          )
-          const nested = await Promise.all(appRequests)
-          const all = nested.flat().sort((a, b) =>
-            new Date(b.createdAt) - new Date(a.createdAt)
-          )
-          setRecentApps(all.slice(0, 5))
-        }
-      } catch (err) {
-        console.error('[RecruiterDashboard] Failed to load data:', err.message)
-        setError('Could not load dashboard data. The server may still be starting up.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
-
-  const statCards = [
-    { label: 'Active Jobs',          value: stats?.activeJobs,         icon: Briefcase, color: 'bg-blue-50 text-[#2557A7]' },
-    { label: 'Total Applications',   value: stats?.totalApplications,  icon: Users,     color: 'bg-green-50 text-green-700' },
-    { label: 'Interviews Scheduled', value: stats?.interviews,         icon: BarChart2, color: 'bg-purple-50 text-purple-700' },
-    { label: 'Total Views',          value: stats?.totalViews,         icon: Eye,       color: 'bg-orange-50 text-orange-700' },
-  ]
-
-  const formatDate = (iso) =>
-    new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
-  return (
-    <EmployerLayout>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#1A1A2E]">
-          Welcome back, {user?.name?.split(' ')[0]} 👋
-        </h1>
-        <p className="text-[#595959] mt-1 text-sm">
-          Here's what's happening with your job postings today.
-        </p>
-      </div>
-
-      {/* Error banner */}
-      {error && (
-        <div className="mb-6 px-4 py-3 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statCards.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4 shadow-sm">
-            <div className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-              <Icon size={20} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[#1A1A2E]">
-                {loading ? (
-                  <span className="inline-block w-8 h-6 bg-gray-200 rounded animate-pulse" />
-                ) : (value ?? 0)}
-              </p>
-              <p className="text-xs text-[#595959] mt-0.5">{label}</p>
-            </div>
-          </div>
-        ))}
->>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       </div>
 
       {/* Quick actions */}
