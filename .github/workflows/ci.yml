@@ -14,14 +14,14 @@ jobs:
 
     env:
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
-      JWT_SECRET: test_jwt_secret_for_ci
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-jwt-secret' }}
       AI_SERVICE_URL: http://localhost:8000
       CLIENT_URL: http://localhost:3001
-      GMAIL_USER: test@test.com
-      GMAIL_APP_PASSWORD: testpassword
-      MAIL_FROM: CareerConnect <test@test.com>
-      GOOGLE_CLIENT_ID: test_client_id
-      GOOGLE_CLIENT_SECRET: test_client_secret
+      GMAIL_USER: ${{ secrets.GMAIL_USER || 'ci-test@example.com' }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD || 'ci-test-placeholder' }}
+      MAIL_FROM: CareerConnect CI
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'ci-test-client-id' }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'ci-test-client-secret' }}
 
     steps:
       - name: Checkout code
