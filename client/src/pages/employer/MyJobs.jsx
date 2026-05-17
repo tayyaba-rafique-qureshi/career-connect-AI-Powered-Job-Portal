@@ -137,7 +137,7 @@ export default function MyJobs() {
 
       {/* Filter tabs */}
       {!loading && jobs.length > 0 && (
-        <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
           {TABS.map(tab => {
             const count = tab === 'all' ? jobs.length : (counts[tab] || 0)
             return (
@@ -146,13 +146,15 @@ export default function MyJobs() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize flex items-center gap-1.5 ${
                   activeTab === tab
-                    ? 'bg-white text-[#1A1A2E] shadow-sm'
-                    : 'text-[#595959] hover:text-[#1A1A2E]'
+                    ? 'bg-white dark:bg-gray-600 text-[#1A1A2E] dark:text-white shadow-sm'
+                    : 'text-[#595959] dark:text-gray-400 hover:text-[#1A1A2E] dark:hover:text-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 {tab}
                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                  activeTab === tab ? 'bg-gray-100 text-[#595959]' : 'bg-gray-200 text-[#595959]'
+                  activeTab === tab
+                    ? 'bg-gray-100 dark:bg-gray-500 text-[#595959] dark:text-gray-200'
+                    : 'bg-gray-200 dark:bg-gray-700 text-[#595959] dark:text-gray-400'
                 }`}>
                   {count}
                 </span>

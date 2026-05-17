@@ -49,16 +49,22 @@ export default function AIMatchBadge({ score, size = 'sm' }) {
         gap: '4px',
       }}>
         <div style={{
-          width: '64px',
-          height: '64px',
+          width: '80px',
+          height: '72px',
           borderRadius: '12px',
           backgroundColor: palette.bg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          flexDirection: 'column',
+          gap: '4px',
+          overflow: 'hidden',
         }}>
-          <span style={{ fontSize: '24px', fontWeight: '800', color: palette.color, lineHeight: 1 }}>
+          <span style={{ fontSize: '16px', fontWeight: '800', color: palette.color, lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap', display: 'block' }}>
             {score}%
+          </span>
+          <span style={{ fontSize: '10px', fontWeight: '600', color: palette.color, lineHeight: 1, letterSpacing: '0.05em', textAlign: 'center', display: 'block' }}>
+            MATCH
           </span>
         </div>
         <span style={{ fontSize: '13px', fontWeight: '600', color: palette.color }}>
