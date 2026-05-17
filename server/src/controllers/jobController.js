@@ -90,6 +90,46 @@ exports.reportJob = async (req, res) => {
 // POST /api/jobs — create job (employer only)
 exports.createJob = async (req, res) => {
   try {
+    // ── Credit check ──────────────────────────────────────────────────────────
+    const poster = await User.findById(req.user.id).select('jobPostCredits')
+    if (!poster) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    // Normalize: clamp any missing/null/negative value to 0 before checking
+    if (
+      poster.jobPostCredits === undefined ||
+      poster.jobPostCredits === null ||
+      poster.jobPostCredits < 0
+    ) {
+      await User.findByIdAndUpdate(req.user.id, { $set: { jobPostCredits: 0 } })
+      poster.jobPostCredits = 0
+    }
+
+    if (poster.jobPostCredits === 0) {
+      return res.status(403).json({
+        error:            'NO_CREDITS',
+        message:          'You have no job post credits remaining. Please purchase more.',
+        creditsRemaining: 0,
+      })
+    }
+
+    // Atomic deduct — only fires if credits > 0, prevents race-condition negatives
+    const deducted = await User.findOneAndUpdate(
+      { _id: req.user.id, jobPostCredits: { $gt: 0 } },
+      { $inc: { jobPostCredits: -1 } },
+      { new: true }
+    )
+    if (!deducted) {
+      // Another request beat us to the last credit
+      return res.status(403).json({
+        error:            'NO_CREDITS',
+        message:          'You have no job post credits remaining. Please purchase more.',
+        creditsRemaining: 0,
+      })
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const employer = await User.findById(req.user.id)
     const companyName = employer?.employerProfile?.companyInfo?.name || employer?.name || 'Unknown Company'
 

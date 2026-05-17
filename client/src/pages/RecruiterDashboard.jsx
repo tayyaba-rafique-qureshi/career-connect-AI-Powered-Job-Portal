@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import EmployerLayout from '../components/employer/EmployerLayout'
+import CreditsBadge from '../components/recruiter/CreditsBadge'
+import BuyCreditsButton from '../components/recruiter/BuyCreditsButton'
 import api from '../services/api'
-import { Briefcase, Users, PlusCircle, Eye, BarChart2 } from 'lucide-react'
+import { Briefcase, Users, PlusCircle, Eye, BarChart2, CreditCard } from 'lucide-react'
 
 const scoreColor = (score) =>
   score >= 80 ? 'bg-green-100 text-green-700' :
@@ -16,6 +18,68 @@ const STATUS_STYLES = {
   shortlisted: 'bg-green-100 text-green-700',
   rejected:    'bg-red-100 text-red-700',
   accepted:    'bg-emerald-100 text-emerald-700',
+}
+
+// ── Credits card — shown on the dashboard so recruiters always see their balance ──
+function CreditsCard() {
+  const [credits, setCredits] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/payments/credits')
+      .then(({ data }) => setCredits(data.credits ?? 0))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return null
+
+  const isEmpty = credits === 0
+
+  return (
+    <div className={`rounded-xl border p-5 mb-8 shadow-sm ${
+      isEmpty
+        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+        : 'bg-white dark:bg-[#1f1f1f] border-gray-200 dark:border-gray-700'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Left: icon + text */}
+        <div className="flex items-start gap-4">
+          <div className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            isEmpty ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-50 dark:bg-blue-900/20'
+          }`}>
+            <CreditCard size={20} className={isEmpty ? 'text-red-600 dark:text-red-400' : 'text-[#2557A7]'} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#1A1A2E] dark:text-white mb-0.5">
+              Job Post Credits
+            </p>
+            <p className="text-sm text-[#595959] dark:text-gray-400">
+              You have{' '}
+              <span className={`text-2xl font-bold ${isEmpty ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                {credits}
+              </span>
+              {' '}credit{credits !== 1 ? 's' : ''} remaining.
+            </p>
+            {isEmpty ? (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-medium">
+                You have no credits left. Buy more to post jobs.
+              </p>
+            ) : (
+              <p className="text-xs text-[#595959] dark:text-gray-500 mt-1">
+                Each job post uses 1 credit.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: buy button */}
+        <div className="sm:flex-shrink-0">
+          <BuyCreditsButton />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function RecruiterDashboard() {
@@ -130,6 +194,9 @@ export default function RecruiterDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Job Post Credits card */}
+      <CreditsCard />
 
       {/* Two-column bottom section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
