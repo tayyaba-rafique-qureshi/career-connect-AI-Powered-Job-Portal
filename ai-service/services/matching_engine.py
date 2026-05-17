@@ -383,17 +383,29 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
 
     # Derive human-readable experience alignment label
     if applicant_years is None or not job_level or job_level == "any":
+<<<<<<< HEAD
         exp_match_label = "unknown" if (applicant_years is None or not job_level) else "match"
+=======
+        exp_match_label = "unknown" if (applicant_years is None or not job_level) else "good"
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     else:
         applicant_level = _years_to_level(applicant_years)
         idx_a = _EXP_ORDER.index(applicant_level) if applicant_level in _EXP_ORDER else -1
         idx_j = _EXP_ORDER.index(job_level)        if job_level        in _EXP_ORDER else -1
         if idx_a == idx_j:
+<<<<<<< HEAD
             exp_match_label = "match"
         elif idx_a < idx_j:
             exp_match_label = "under"
         else:
             exp_match_label = "over"
+=======
+            exp_match_label = "good"
+        elif idx_a < idx_j:
+            exp_match_label = "underqualified"
+        else:
+            exp_match_label = "overqualified"
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     # ── Component 5: Tools match (5%) ────────────────────────────────────────
     # Combines structured tools/certs from onboarding with DevOps/tool-category
@@ -451,6 +463,7 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
         2,
     )
 
+<<<<<<< HEAD
     # ── Breakdown (4 components, ATS folded into semanticScore) ──────────────
     # The ATS score is computed separately but its contribution is merged into
     # the semanticScore component so the breakdown always has exactly four keys:
@@ -464,6 +477,9 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
         if _combined_text_weight > 0 else 0.0,
         2,
     )
+=======
+    # ── Breakdown ─────────────────────────────────────────────────────────────
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     breakdown = {
         "skillScore": {
             "score":        round(skill_score, 2),
@@ -471,9 +487,20 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
             "contribution": round(skill_score * _W_SKILL, 2),
         },
         "semanticScore": {
+<<<<<<< HEAD
             "score":           _combined_text_score,
             "weight":          _combined_text_weight,
             "contribution":    _combined_text_contribution,
+=======
+            "score":        round(semantic_score, 2),
+            "weight":       _W_SEMANTIC,
+            "contribution": round(semantic_score * _W_SEMANTIC, 2),
+        },
+        "atsScore": {
+            "score":           round(ats_score, 2),
+            "weight":          _W_ATS,
+            "contribution":    round(ats_score * _W_ATS, 2),
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
             "keywordsMatched": len(ats_result.get("keywordsMatched", [])),
             "keywordsMissing": len(ats_result.get("keywordsMissing", [])),
         },
@@ -513,7 +540,10 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
         "totalRequired":       total_required,
         "feedback":            feedback,
         "experienceMatch":     exp_match_label,
+<<<<<<< HEAD
         "experienceMatch":     exp_match_label,
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
         "experienceSummary":   exp_summary,
         "atsKeywordsMatched":  ats_result.get("keywordsMatched", []),
         "atsKeywordsMissing":  ats_result.get("keywordsMissing", []),

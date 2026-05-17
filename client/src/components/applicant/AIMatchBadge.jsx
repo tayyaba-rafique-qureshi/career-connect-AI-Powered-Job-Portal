@@ -49,13 +49,19 @@ export default function AIMatchBadge({ score, size = 'sm' }) {
         gap: '4px',
       }}>
         <div style={{
+<<<<<<< HEAD
           width: '80px',
           height: '72px',
+=======
+          width: '64px',
+          height: '64px',
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
           borderRadius: '12px',
           backgroundColor: palette.bg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+<<<<<<< HEAD
           flexDirection: 'column',
           gap: '4px',
           overflow: 'hidden',
@@ -66,6 +72,12 @@ export default function AIMatchBadge({ score, size = 'sm' }) {
           <span style={{ fontSize: '10px', fontWeight: '600', color: palette.color, lineHeight: 1, letterSpacing: '0.05em', textAlign: 'center', display: 'block' }}>
             MATCH
           </span>
+=======
+        }}>
+          <span style={{ fontSize: '24px', fontWeight: '800', color: palette.color, lineHeight: 1 }}>
+            {score}%
+          </span>
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
         </div>
         <span style={{ fontSize: '13px', fontWeight: '600', color: palette.color }}>
           {palette.label}

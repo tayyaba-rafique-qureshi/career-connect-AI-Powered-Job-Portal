@@ -76,9 +76,13 @@ exports.reportJob = async (req, res) => {
       job: job._id,
       reportedBy: req.user.id,
       reason,
+<<<<<<< HEAD
       description: description || '',
       status: 'pending',
       resolved: false
+=======
+      description: description || ''
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     })
 
     res.status(201).json({ message: 'Job reported successfully', reportId: report._id })
@@ -92,6 +96,7 @@ exports.reportJob = async (req, res) => {
 // POST /api/jobs — create job (employer only)
 exports.createJob = async (req, res) => {
   try {
+<<<<<<< HEAD
     // ── Credit check ──────────────────────────────────────────────────────────
     const poster = await User.findById(req.user.id).select('jobPostCredits')
     if (!poster) {
@@ -132,6 +137,8 @@ exports.createJob = async (req, res) => {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     const employer = await User.findById(req.user.id)
     const companyName = employer?.employerProfile?.companyInfo?.name || employer?.name || 'Unknown Company'
 
@@ -255,7 +262,11 @@ exports.updateJobStatus = async (req, res) => {
   }
 }
 
+<<<<<<< HEAD
 // GET /api/jobs/:id/applicants — get all applicants for a job with mock AI scores
+=======
+// GET /api/jobs/:id/applicants — get all applicants for a job, enriched with live AI match scores
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 exports.getJobApplicants = async (req, res) => {
   try {
     const job = await Job.findOne({ _id: req.params.id, postedBy: req.user.id })
@@ -277,6 +288,7 @@ exports.getJobApplicants = async (req, res) => {
 
     const jobSkills = job.requiredSkills || job.skills || []
 
+<<<<<<< HEAD
     // Enrich each application with an AI match score.
     // Strategy:
     //   1. If aiScore was set within the last 24 hours, use the cached value.
@@ -286,11 +298,20 @@ exports.getJobApplicants = async (req, res) => {
 
     const enriched = await Promise.all(applications.map(async (app) => {
       // ── Skill overlap (always computed locally — fast) ────────────────────
+=======
+    // Build enriched applicant list with real AI match scores.
+    // Strategy: prefer the score saved on the Application at apply-time;
+    // if missing (legacy data), call the AI service live; if AI is
+    // unreachable, fall back to a local skill-overlap ratio so the
+    // recruiter still sees a useful number.
+    const enriched = await Promise.all(applications.map(async (app) => {
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       const applicantSkills = (app.applicant.applicantProfile?.skills || [])
         .map(s => (typeof s === 'string' ? s : s.name).toLowerCase())
       const matched = jobSkills.filter(s => applicantSkills.includes(s.toLowerCase()))
       const missing = jobSkills.filter(s => !applicantSkills.includes(s.toLowerCase()))
 
+<<<<<<< HEAD
       // ── Score resolution ──────────────────────────────────────────────────
       let matchScore = null
 
@@ -327,13 +348,39 @@ exports.getJobApplicants = async (req, res) => {
         matchScore = 60 + (idSum % 40) // 60–99
       }
 
+=======
+      let matchScore = null
+      if (app.aiScore != null) {
+        // Stored score is 0-1 → convert to 0-100 percentage
+        matchScore = Math.round(app.aiScore * 100)
+      } else {
+        const live = await aiService.matchApplicantToJob(
+          app.applicant._id.toString(),
+          job._id.toString()
+        )
+        if (live.matchScore != null) {
+          matchScore = Math.round(live.matchScore)
+        } else if (jobSkills.length > 0) {
+          matchScore = Math.round((matched.length / jobSkills.length) * 100)
+        } else {
+          matchScore = 0
+        }
+      }
+
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       return {
         ...app.toObject(),
         matchScore,
         skillsMatched: matched.length,
+<<<<<<< HEAD
         totalSkills:   jobSkills.length,
         matchedSkills: matched,
         missingSkills: missing,
+=======
+        totalSkills: jobSkills.length,
+        matchedSkills: matched,
+        missingSkills: missing
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       }
     }))
 
