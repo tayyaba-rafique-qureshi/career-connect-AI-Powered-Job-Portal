@@ -5,8 +5,7 @@ const aiService = require('../services/aiService')
 const {
   sendApplicationConfirmEmail,
   sendNewApplicationEmail,
-  sendStatusUpdateEmail,
-  sendInterviewUpdateEmail
+  sendStatusUpdateEmail
 } = require('../services/emailService')
 const Notification = require('../models/Notification')
 const mongoose = require('mongoose')
@@ -38,63 +37,68 @@ exports.applyToJob = async (req, res) => {
     const existing = await Application.findOne({ job: job._id, applicant: req.user.id })
     if (existing) return res.status(400).json({ message: 'Already applied to this job' })
 
-    // Pull applicant profile for skill matching
+    // Pull applicant profile for local skill matching (fast, no AI call)
     const applicant = await User.findById(req.user.id)
     const storedResumeText = applicant?.applicantProfile?.resume?.rawText || ''
     const effectiveResumeText = resumeText || storedResumeText
 
-    // Compute AI score via the AI microservice using ID-based contract.
-    // matchApplicantToJob hits POST /api/ai/match with {applicant_id, job_id}
-    // and returns { matchScore (0-100), skillsMatched, skillsMissing }.
-    const aiResult = await aiService.matchApplicantToJob(req.user.id, job._id.toString())
-    // Convert 0-100 to 0-1 to match the existing Application.aiScore convention.
-    const aiScore = aiResult.matchScore != null ? aiResult.matchScore / 100 : null
-
-    // Use AI-service skill computation if available, otherwise fall back to local compute.
+    // Local skill overlap — computed synchronously so the response is instant
     const applicantSkillList = (applicant?.applicantProfile?.skills || [])
       .map(s => (typeof s === 'string' ? s : s.name || '').toLowerCase())
-    const requiredSkills = job.requiredSkills || []
-    const skillsMatched = aiResult.skillsMatched.length
-      ? aiResult.skillsMatched
-      : requiredSkills.filter(s => applicantSkillList.includes(s.toLowerCase()))
-    const skillsMissing = aiResult.skillsMissing.length
-      ? aiResult.skillsMissing
-      : requiredSkills.filter(s => !applicantSkillList.includes(s.toLowerCase()))
+    const requiredSkills  = job.requiredSkills || []
+    const skillsMatched   = requiredSkills.filter(s => applicantSkillList.includes(s.toLowerCase()))
+    const skillsMissing   = requiredSkills.filter(s => !applicantSkillList.includes(s.toLowerCase()))
 
+    // Create the application immediately — applicant does NOT wait for AI
     const application = await Application.create({
-      job: job._id,
-      applicant: req.user.id,
-      resumeText: effectiveResumeText,
-      aiScore,
+      job:          job._id,
+      applicant:    req.user.id,
+      resumeText:   effectiveResumeText,
+      aiScore:      null,          // will be filled in async below
       skillsMatched,
       skillsMissing,
-      coverLetter: coverLetter || '',
-      appliedAt: new Date()
+      coverLetter:  coverLetter || '',
+      appliedAt:    new Date(),
     })
 
-    sendApplicationConfirmEmail({ applicant, job: { ...job.toObject(), aiScore } })
-
-    if (job.postedBy) {
-      const employer = await User.findById(job.postedBy)
-      if (employer) {
-        sendNewApplicationEmail({ employer, applicant, job: { ...job.toObject(), aiScore } })
-        await Notification.create({
-          user: employer._id,
-          type: 'general',
-          title: 'New application',
-          message: `${applicant?.name || 'An applicant'} applied for ${job.title}`,
-          link: `/dashboard/recruiter/jobs/${job._id}/applicants`,
-        }).catch(() => {})
-      }
-    }
-
+    // Respond to the applicant right away
     res.status(201).json({
       applicationId: application._id,
-      message: 'Application submitted',
-      aiScore,
+      message:       'Application submitted',
+      aiScore:       null,         // score will be computed in the background
       skillsMatched,
-      skillsMissing
+      skillsMissing,
     })
+
+    // ── Fire-and-forget: compute AI score in the background ───────────────
+    // This runs after the response has been sent so the applicant never waits.
+    ;(async () => {
+      try {
+        const aiResult = await aiService.analyzeMatch(
+          req.user.id.toString(),
+          job._id.toString()
+        )
+        if (aiResult.matchScore !== null && aiResult.matchScore !== undefined) {
+          await Application.findByIdAndUpdate(application._id, {
+            aiScore:       aiResult.matchScore,
+            skillsMatched: aiResult.skillsMatched.length ? aiResult.skillsMatched : skillsMatched,
+            skillsMissing: aiResult.skillsMissing.length ? aiResult.skillsMissing : skillsMissing,
+          })
+          console.log(`[AI Service] score saved for application ${application._id}: ${aiResult.matchScore}`)
+        }
+      } catch (err) {
+        // Non-fatal — application already saved, score stays null
+        console.warn(`[AI Service] background score failed for application ${application._id}: ${err.message}`)
+      }
+    })()
+
+    // Confirmation emails (also fire-and-forget)
+    sendApplicationConfirmEmail({ applicant, job: { ...job.toObject(), aiScore: null } })
+    if (job.postedBy) {
+      User.findById(job.postedBy).then(employer => {
+        if (employer) sendNewApplicationEmail({ employer, applicant, job: job.toObject() })
+      }).catch(() => {})
+    }
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -183,20 +187,17 @@ exports.updateStatus = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
-    const oldStatus = application.status
     application.status = status
     await application.save()
 
-    if (oldStatus !== status) {
-      sendStatusUpdateEmail({
-        applicant: application.applicant,
-        job: application.job,
-        status
-      })
-    }
+    sendStatusUpdateEmail({
+      applicant: application.applicant,
+      job: application.job,
+      status
+    })
 
     // In-app notification for applicant
-    if (oldStatus !== status) try {
+    try {
       await Notification.create({
         user: application.applicant._id,
         type: 'status_update',
@@ -221,7 +222,6 @@ exports.scheduleInterview = async (req, res) => {
 
     const application = await Application.findById(req.params.id)
       .populate('job', 'title company postedBy')
-      .populate('applicant', 'name email')
 
     if (!application) return res.status(404).json({ message: 'Application not found' })
 
@@ -253,22 +253,10 @@ exports.scheduleInterview = async (req, res) => {
     application.status = 'shortlisted'
     await application.save()
 
-    sendStatusUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      status: 'shortlisted'
-    })
-    sendInterviewUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      interview: application.interview,
-      isReschedule: false
-    })
-
     // In-app notification for applicant
     try {
       await Notification.create({
-        user: application.applicant._id,
+        user: application.applicant,
         type: 'interview',
         title: 'Interview scheduled',
         message: `${application.job.title} at ${application.job.company}${date ? ` · ${date}` : ''}${time ? ` ${time}` : ''}`,
@@ -291,7 +279,6 @@ exports.rescheduleInterview = async (req, res) => {
 
     const application = await Application.findById(req.params.id)
       .populate('job', 'title company postedBy')
-      .populate('applicant', 'name email')
 
     if (!application) return res.status(404).json({ message: 'Application not found' })
     if (application.job.postedBy.toString() !== req.user.id) {
@@ -322,22 +309,6 @@ exports.rescheduleInterview = async (req, res) => {
     }
 
     await application.save()
-
-    sendInterviewUpdateEmail({
-      applicant: application.applicant,
-      job: application.job,
-      interview: application.interview,
-      isReschedule: true
-    })
-
-    await Notification.create({
-      user: application.applicant._id,
-      type: 'interview',
-      title: 'Interview rescheduled',
-      message: `${application.job.title} at ${application.job.company}${application.interview.date ? ` Â· ${application.interview.date}` : ''}${application.interview.time ? ` ${application.interview.time}` : ''}`,
-      link: '/my-jobs?tab=interviews',
-    }).catch(() => {})
-
     res.json(application)
   } catch (err) {
     res.status(500).json({ message: err.message })

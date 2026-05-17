@@ -35,6 +35,7 @@ app.use('/api/ai', require('./routes/aiRoutes'))
 app.use('/api/company-reviews', require('./routes/companyReviewRoutes'))
 app.use('/api/reviews', require('./routes/reviewRoutes'))
 app.use('/api/messages', require('./routes/messageRoutes'))
+app.use('/api/payments', require('./routes/paymentRoutes'))
 
 const PORT = process.env.PORT || 5001
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
