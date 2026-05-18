@@ -87,6 +87,29 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
+          {/* Dark mode toggle — visible on mobile in the top bar */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle dark mode"
+            className="md:hidden w-10 h-10 rounded-full inline-flex items-center justify-center text-[#595959] hover:bg-gray-100 transition-colors"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          {/* Bell icon — visible on mobile in the top bar */}
+          <Link to="/notifications" className="md:hidden inline-flex relative mr-1">
+            <div className="w-10 h-10 rounded-full inline-flex items-center justify-center text-[#595959] hover:bg-gray-100 transition-colors">
+              <Bell size={20} />
+            </div>
+            {unreadCount > 0 && (
+              <span className="absolute top-[2px] right-[2px] min-w-[16px] h-[16px] px-[4px] bg-[#D93025] rounded-full border-2 border-white text-[9px] font-bold text-white flex items-center justify-center leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Link>
+
           {/* Right actions (desktop) */}
           <div className="hidden md:flex items-center gap-1">
             <Link to="/my-jobs?tab=saved" className="inline-flex">
