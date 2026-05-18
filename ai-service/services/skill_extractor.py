@@ -150,6 +150,7 @@ def normalize_skills_list(skills: list) -> list[str]:
 def calculate_skill_match(
     applicant_skills: list[str],
     job_skills: list[str],
+    skill_sources: dict[str, str] | None = None,
 ) -> dict:
     """
     Perform a three-way case-insensitive comparison between the skills an
@@ -157,10 +158,11 @@ def calculate_skill_match(
 
     Categories
     ----------
-    matchedSkills : skills the applicant has that the job requires
-    missingSkills : skills the job requires that the applicant lacks
-    extraSkills   : skills the applicant has that the job does NOT require
-                    (useful for surfacing transferable skills)
+    matchedSkills : skills the applicant has that the job requires.
+                    Each entry is a dict: {"skill": str, "source": str}
+                    where source is "onboarding", "resume", or "both".
+    missingSkills : skills the job requires that the applicant lacks (list[str]).
+    extraSkills   : skills the applicant has that the job does NOT require (list[str]).
 
     Score formula
     -------------
@@ -175,25 +177,34 @@ def calculate_skill_match(
         (already normalised via normalize_skills_list if needed).
     job_skills : list[str]
         Flat list of required skill name strings from the job document.
+    skill_sources : dict[str, str] | None
+        Optional mapping of lowercase skill name → source label
+        ("onboarding", "resume", or "both").  When provided, each matched
+        skill entry will include a "source" field.  When absent, source
+        defaults to "onboarding" for backward compatibility.
 
     Returns
     -------
     dict with keys:
-        matchedSkills : list[str]  — original casing from job_skills
-        missingSkills : list[str]  — original casing from job_skills
-        extraSkills   : list[str]  — original casing from applicant_skills
-        matchScore    : float      — 0.0–100.0
-        matchCount    : int        — len(matchedSkills)
-        totalRequired : int        — len(job_skills)
+        matchedSkills : list[dict]  — [{"skill": str, "source": str}, ...]
+        missingSkills : list[str]   — original casing from job_skills
+        extraSkills   : list[str]   — original casing from applicant_skills
+        matchScore    : float       — 0.0–100.0
+        matchCount    : int         — len(matchedSkills)
+        totalRequired : int         — len(job_skills)
 
     Examples
     --------
     >>> calculate_skill_match(
     ...     ["Python", "Django", "Docker"],
     ...     ["Python", "Django", "PostgreSQL", "Redis"],
+    ...     {"python": "onboarding", "django": "resume", "docker": "both"},
     ... )
     {
-        'matchedSkills': ['Python', 'Django'],
+        'matchedSkills': [
+            {"skill": "Python", "source": "onboarding"},
+            {"skill": "Django", "source": "resume"},
+        ],
         'missingSkills': ['PostgreSQL', 'Redis'],
         'extraSkills':   ['Docker'],
         'matchScore':    50.0,
@@ -209,12 +220,13 @@ def calculate_skill_match(
         s.strip().lower(): s for s in job_skills if s and s.strip()
     }
 
-    matched: list[str] = []
+    matched: list[dict] = []
     missing: list[str] = []
 
     for key, original in job_lower.items():
         if key in applicant_lower:
-            matched.append(original)
+            source = (skill_sources or {}).get(key, "onboarding")
+            matched.append({"skill": original, "source": source})
         else:
             missing.append(original)
 
@@ -405,6 +417,92 @@ def get_combined_applicant_skills(applicant_data: dict) -> list[str]:
         f"text={len(text_skills)} tools={len(tools)} combined={len(combined)}"
     )
     return combined
+
+
+def get_combined_applicant_skills_with_sources(applicant_data: dict) -> tuple[list[str], dict[str, str]]:
+    """
+    Same as get_combined_applicant_skills() but also returns a source map.
+
+    The source map records where each skill came from so the gap analysis
+    can tag matched skills with "onboarding", "resume", or "both".
+
+    Source priority / tagging rules
+    --------------------------------
+    - A skill that appears in BOTH structured onboarding AND resume text
+      is tagged "both".
+    - A skill that appears only in structured onboarding (or tools) is
+      tagged "onboarding".
+    - A skill that appears only in resume text extraction is tagged "resume".
+
+    Tools are treated as "onboarding" because they come from the structured
+    profile the applicant filled in during onboarding.
+
+    Parameters
+    ----------
+    applicant_data : dict
+        Full applicant MongoDB document.
+
+    Returns
+    -------
+    tuple[list[str], dict[str, str]]
+        combined_skills : deduplicated merged skill list (same as
+                          get_combined_applicant_skills())
+        source_map      : {lowercase_skill_name: "onboarding"|"resume"|"both"}
+    """
+    profile = applicant_data.get("applicantProfile") or {}
+
+    # ── Source 1: structured skills from onboarding ───────────────────────────
+    structured_skills: list[str] = normalize_skills_list(profile.get("skills") or [])
+
+    # ── Source 2: skills extracted from resume rawText ────────────────────────
+    resume_text: str = (profile.get("resume") or {}).get("rawText") or ""
+    text_skills: list[str] = extract_skills_from_text_confident(resume_text) if resume_text.strip() else []
+
+    # ── Source 3: tools listed in profile (treated as "onboarding") ──────────
+    raw_tools = profile.get("tools") or []
+    tools: list[str] = []
+    for t in raw_tools:
+        if isinstance(t, str):
+            name = t.strip()
+        elif isinstance(t, dict):
+            name = t.get("name", "").strip()
+        else:
+            name = ""
+        if name:
+            tools.append(name)
+
+    # Build lowercase sets for source tagging
+    onboarding_lower: set[str] = {s.lower() for s in structured_skills + tools if s}
+    resume_lower: set[str]     = {s.lower() for s in text_skills if s}
+
+    # ── Merge, deduplicating case-insensitively ───────────────────────────────
+    seen: set[str] = set()
+    combined: list[str] = []
+    source_map: dict[str, str] = {}
+
+    for skill in structured_skills + text_skills + tools:
+        if not skill:
+            continue
+        key = skill.lower()
+        if key not in seen:
+            seen.add(key)
+            combined.append(skill)
+
+        # Tag source (may be updated to "both" on second encounter)
+        in_onboarding = key in onboarding_lower
+        in_resume     = key in resume_lower
+        if in_onboarding and in_resume:
+            source_map[key] = "both"
+        elif in_resume:
+            source_map[key] = "resume"
+        else:
+            source_map[key] = "onboarding"
+
+    print(
+        f"[skill_extractor] structured={len(structured_skills)} "
+        f"text={len(text_skills)} tools={len(tools)} combined={len(combined)}"
+    )
+    return combined, source_map
 
 
 def extract_experience_from_text(text: str) -> float | None:
