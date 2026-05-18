@@ -99,13 +99,22 @@ app = FastAPI(
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 
+_cors_origins = [
+    "http://localhost:5173",
+    "http://localhost:3001",
+    "http://localhost:5000",
+]
+_client_url = os.getenv("CLIENT_URL", "")
+_backend_url = os.getenv("BACKEND_URL", "")
+if _client_url:
+    _cors_origins.append(_client_url)
+if _backend_url:
+    _cors_origins.append(_backend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite default dev port
-        "http://localhost:3001",   # CareerConnect client dev port
-        "http://localhost:5000",   # Node.js Express server
-    ],
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
