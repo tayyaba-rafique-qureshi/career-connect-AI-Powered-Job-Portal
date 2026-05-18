@@ -192,6 +192,11 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
         "experienceMatch":   result["experienceMatch"],
         "applicantFeedback": applicant_feedback,
         "recruiterFeedback": recruiter_feedback,
+        # Convenience flat list for callers that only need skill names
+        "skillsMatchedNames": [
+            s["skill"] if isinstance(s, dict) else s
+            for s in result["skillsMatched"]
+        ],
     }
 
 
@@ -531,6 +536,12 @@ async def career_advice(
     current_skills: list[str] = get_combined_applicant_skills(applicant)
     missing_skills: list[str] = match_result["skillsMissing"]
 
+    # skillsMatched is now list[dict] — extract names for career advice
+    skills_matched_names: list[str] = [
+        s["skill"] if isinstance(s, dict) else s
+        for s in match_result["skillsMatched"]
+    ]
+
     # ── Generate career advice ────────────────────────────────────────────────
     advice = get_career_recommendations(
         missing_skills=missing_skills,
@@ -550,6 +561,7 @@ async def career_advice(
         "jobTitle":          job.get("title", ""),
         "currentMatchScore": match_result["finalScore"],
         "skillsMatched":     match_result["skillsMatched"],
+        "skillsMatchedNames": skills_matched_names,
         "skillsMissing":     missing_skills,
         "careerAdvice":      advice,
     }

@@ -117,13 +117,19 @@ def generate_applicant_feedback(match_result: dict, job_data: dict) -> dict:
         skillGapResources   : list[dict]  — [{skill, suggestion}, …]
     """
     score          = match_result.get("finalScore", 0.0)
-    matched        = match_result.get("skillsMatched", [])
+    matched_raw    = match_result.get("skillsMatched", [])
     missing        = match_result.get("skillsMissing", [])
-    match_count    = match_result.get("matchCount", len(matched))
-    total_required = match_result.get("totalRequired", len(matched) + len(missing))
+    match_count    = match_result.get("matchCount", len(matched_raw))
+    total_required = match_result.get("totalRequired", len(matched_raw) + len(missing))
     breakdown      = match_result.get("breakdown", {})
     exp_match      = match_result.get("experienceMatch", "unknown")
     job_title      = job_data.get("title", "this role")
+
+    # Normalise: skillsMatched may be list[dict] (new) or list[str] (legacy)
+    matched: list[str] = [
+        s["skill"] if isinstance(s, dict) else s
+        for s in matched_raw
+    ]
 
     # ── Headline ──────────────────────────────────────────────────────────────
     if score >= 85:
@@ -241,10 +247,16 @@ def generate_recruiter_feedback(match_result: dict, applicant_data: dict) -> dic
         scoreBreakdownText   : str   — "Skill: X% | Semantic: X% | Experience: X% | Tools: X%"
     """
     score     = match_result.get("finalScore", 0.0)
-    matched   = match_result.get("skillsMatched", [])
+    matched_raw = match_result.get("skillsMatched", [])
     missing   = match_result.get("skillsMissing", [])
     breakdown = match_result.get("breakdown", {})
     exp_match = match_result.get("experienceMatch", "unknown")
+
+    # Normalise: skillsMatched may be list[dict] (new) or list[str] (legacy)
+    matched: list[str] = [
+        s["skill"] if isinstance(s, dict) else s
+        for s in matched_raw
+    ]
 
     profile  = applicant_data.get("applicantProfile") or {}
     pro_info = profile.get("professionalInfo") or {}

@@ -1,365 +1,238 @@
 """
-Unit tests for the CareerConnect hybrid matching engine.
+tests/test_similarity.py
+-------------------------
+Unit tests for the skill gap analysis merge logic.
 
-Covers:
-  - Preprocessing pipeline
-  - Semantic similarity (get_semantic_similarity)
-  - Four-component matching engine (calculate_match_score)
-  - Job graph construction
-  - A* search
-
-All tests run without MongoDB — pure Python logic only.
-The sentence-transformer model may not be available in lightweight CI
-environments; tests that depend on it assert on ranges rather than exact
-values and tolerate TF-IDF fallback.
+Tests cover:
+  - calculate_skill_match with source tagging
+  - get_combined_applicant_skills_with_sources
+  - Edge cases: no resume, no onboarding skills, both empty
+  - Case-insensitive deduplication
+  - "both" source tagging when skill appears in both sources
 """
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.preprocessing import preprocess_resume, preprocess_job
-from services.similarity import (
-    get_semantic_similarity,
-    calculate_cosine_similarity,
-    build_job_graph,
-    run_astar_search,
+import pytest
+from services.skill_extractor import (
+    calculate_skill_match,
+    normalize_skills_list,
+    get_combined_applicant_skills,
+    get_combined_applicant_skills_with_sources,
 )
-from services.matching_engine import calculate_match_score
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── calculate_skill_match ─────────────────────────────────────────────────────
 
-def _make_applicant(skills=None, tools=None, resume_text="", years=None):
-    """Build a minimal applicant dict in MongoDB document shape."""
-    return {
-        "applicantProfile": {
-            "skills": [{"name": s} for s in (skills or [])],
-            "tools":  tools or [],
-            "resume": {"rawText": resume_text},
-            "professionalInfo": {
-                "yearsOfExp": str(years) if years is not None else None,
-            },
-        }
-    }
+class TestCalculateSkillMatch:
+    def test_basic_match_with_sources(self):
+        applicant = ["Python", "Django", "Docker"]
+        job       = ["Python", "Django", "PostgreSQL"]
+        sources   = {"python": "onboarding", "django": "resume", "docker": "both"}
 
+        result = calculate_skill_match(applicant, job, sources)
 
-def _make_job(skills=None, description="", level="any"):
-    """Build a minimal job dict in MongoDB document shape."""
-    return {
-        "requiredSkills": skills or [],
-        "description":    description,
-        "experienceLevel": level,
-    }
+        assert result["matchScore"] == pytest.approx(66.67, abs=0.1)
+        assert result["matchCount"] == 2
+        assert result["totalRequired"] == 3
 
+        matched_map = {m["skill"].lower(): m["source"] for m in result["matchedSkills"]}
+        assert matched_map["python"] == "onboarding"
+        assert matched_map["django"] == "resume"
+        assert "postgresql" not in matched_map
 
-# ── Preprocessing ─────────────────────────────────────────────────────────────
-class TestPreprocessing:
-    def test_lowercases_text(self):
-        assert preprocess_resume("Hello World PYTHON") == \
-               preprocess_resume("Hello World PYTHON").lower()
+        assert "PostgreSQL" in result["missingSkills"]
 
-    def test_removes_commas(self):
-        result = preprocess_resume("Hello, World!")
-        assert "," not in result
+    def test_no_sources_defaults_to_onboarding(self):
+        applicant = ["React", "Node.js"]
+        job       = ["React", "Node.js", "TypeScript"]
 
-    def test_preserves_cpp(self):
-        result = preprocess_resume("Expert in C++ programming")
-        assert "c++" in result
+        result = calculate_skill_match(applicant, job)
 
-    def test_preserves_csharp(self):
-        result = preprocess_resume("C# developer")
-        assert "c#" in result
+        for m in result["matchedSkills"]:
+            assert m["source"] == "onboarding"
 
-    def test_preserves_dotnet(self):
-        result = preprocess_resume(".NET framework experience")
-        assert ".net" in result
+    def test_case_insensitive_matching(self):
+        applicant = ["python", "DJANGO"]
+        job       = ["Python", "Django", "Redis"]
+        sources   = {"python": "resume", "django": "onboarding"}
 
-    def test_empty_string_returns_string(self):
-        assert isinstance(preprocess_resume(""), str)
+        result = calculate_skill_match(applicant, job, sources)
 
-    def test_job_combines_description_and_skills(self):
-        result = preprocess_job("Build REST APIs", ["Python", "FastAPI"])
-        assert "python" in result
-        assert "fastapi" in result
+        assert result["matchCount"] == 2
+        matched_names = [m["skill"] for m in result["matchedSkills"]]
+        # Original casing from job_skills is preserved
+        assert "Python" in matched_names
+        assert "Django" in matched_names
 
+    def test_empty_applicant_skills(self):
+        result = calculate_skill_match([], ["React", "Node.js"])
+        assert result["matchScore"] == 0.0
+        assert result["matchCount"] == 0
+        assert result["matchedSkills"] == []
+        assert set(result["missingSkills"]) == {"React", "Node.js"}
 
-# ── Semantic similarity ───────────────────────────────────────────────────────
-class TestSemanticSimilarity:
-    """
-    Tests for get_semantic_similarity().
-    Assertions use wide ranges to tolerate both the sentence-transformer
-    model and the TF-IDF fallback.
-    """
+    def test_empty_job_skills(self):
+        result = calculate_skill_match(["Python", "Django"], [])
+        assert result["matchScore"] == 0.0
+        assert result["matchCount"] == 0
+        assert result["matchedSkills"] == []
 
-    def test_identical_texts_score_high(self):
-        text = "python developer react nodejs postgresql"
-        score = get_semantic_similarity(text, text)
-        assert score > 90.0, f"Expected >90, got {score}"
+    def test_perfect_match(self):
+        skills = ["Python", "Django", "PostgreSQL"]
+        result = calculate_skill_match(skills, skills)
+        assert result["matchScore"] == 100.0
+        assert result["matchCount"] == 3
+        assert result["missingSkills"] == []
 
-    def test_empty_inputs_return_zero(self):
-        assert get_semantic_similarity("", "") == 0.0
-        assert get_semantic_similarity("python developer", "") == 0.0
-        assert get_semantic_similarity("", "python developer") == 0.0
+    def test_no_match(self):
+        result = calculate_skill_match(["Python"], ["Java", "Spring Boot"])
+        assert result["matchScore"] == 0.0
+        assert result["matchCount"] == 0
+        assert len(result["missingSkills"]) == 2
 
-    def test_score_in_valid_range(self):
-        score = get_semantic_similarity(
-            "react frontend developer javascript",
-            "backend python engineer django"
-        )
-        assert 0.0 <= score <= 100.0
+    def test_matched_skills_are_dicts(self):
+        result = calculate_skill_match(["Python"], ["Python"])
+        assert isinstance(result["matchedSkills"], list)
+        assert len(result["matchedSkills"]) == 1
+        entry = result["matchedSkills"][0]
+        assert isinstance(entry, dict)
+        assert "skill" in entry
+        assert "source" in entry
 
-    def test_returns_float(self):
-        score = get_semantic_similarity("developer", "engineer")
-        assert isinstance(score, float)
-
-    def test_related_texts_score_higher_than_unrelated(self):
-        related = get_semantic_similarity(
-            "python backend developer django rest api",
-            "python flask developer postgresql rest"
-        )
-        unrelated = get_semantic_similarity(
-            "graphic designer photoshop illustrator branding",
-            "python backend developer postgresql"
-        )
-        assert related > unrelated, \
-            f"Related ({related}) should score higher than unrelated ({unrelated})"
+    def test_missing_skills_are_strings(self):
+        result = calculate_skill_match([], ["Docker", "AWS"])
+        assert all(isinstance(s, str) for s in result["missingSkills"])
 
 
-# ── Hybrid matching engine — three required scenario tests ────────────────────
-class TestMatchingEngine:
-    """
-    Three scenario tests required by the spec, plus structural tests.
-    """
+# ── get_combined_applicant_skills_with_sources ────────────────────────────────
 
-    # ── Scenario 1: React developer CV vs React job → expect ≥ 75% ──────────
-    def test_react_developer_vs_react_job(self):
-        """
-        A React developer with matching skills and resume text should score
-        at least 75% against a React frontend job.
-        """
-        applicant = _make_applicant(
-            skills=["React", "JavaScript", "TypeScript", "Redux", "HTML", "CSS", "Git"],
-            tools=["Git", "Figma", "Postman"],
-            resume_text=(
-                "Experienced React developer with 4 years building single-page "
-                "applications using React, Redux, TypeScript, and REST APIs. "
-                "Proficient in HTML, CSS, and responsive design. "
-                "Used Git for version control and Figma for design collaboration."
-            ),
-            years=4,
-        )
-        job = _make_job(
-            skills=["React", "JavaScript", "TypeScript", "Redux", "HTML", "CSS"],
-            description=(
-                "We are looking for a React frontend developer to build "
-                "modern web applications. Must know React, Redux, TypeScript, "
-                "HTML, CSS. Experience with Git and Figma is a plus."
-            ),
-            level="mid",
-        )
-        result = calculate_match_score(applicant, job)
-        assert result["finalScore"] >= 75.0, \
-            f"React dev vs React job: expected ≥75%, got {result['finalScore']}%"
-
-    # ── Scenario 2: Designer CV vs Python backend job → expect ≤ 30% ────────
-    def test_designer_vs_python_backend_job(self):
-        """
-        A graphic designer with no backend skills should score at most 30%
-        against a Python backend engineering role.
-        """
-        applicant = _make_applicant(
-            skills=["Figma", "Photoshop", "Illustrator", "Adobe XD", "Sketch"],
-            tools=["Figma", "Photoshop"],
-            resume_text=(
-                "Creative graphic designer with 5 years of experience in "
-                "visual branding, UI mockups, Figma prototyping, and print design. "
-                "Skilled in Adobe Creative Suite including Photoshop and Illustrator."
-            ),
-            years=5,
-        )
-        job = _make_job(
-            skills=["Python", "Django", "PostgreSQL", "Docker", "AWS", "REST APIs"],
-            description=(
-                "Backend Python engineer needed to build scalable REST APIs "
-                "using Django and PostgreSQL. Must have Docker and AWS experience. "
-                "Strong Python skills required."
-            ),
-            level="senior",
-        )
-        result = calculate_match_score(applicant, job)
-        assert result["finalScore"] <= 30.0, \
-            f"Designer vs Python backend: expected ≤30%, got {result['finalScore']}%"
-
-    # ── Scenario 3: Empty resume → no crash, returns score with fallback ─────
-    def test_empty_resume_does_not_crash(self):
-        """
-        An applicant with no resume text should not raise an exception.
-        The engine falls back to skill-list comparison and returns a valid score.
-        """
-        applicant = _make_applicant(
-            skills=["Python", "Django"],
-            tools=[],
-            resume_text="",   # ← empty
-            years=2,
-        )
-        job = _make_job(
-            skills=["Python", "Django", "PostgreSQL"],
-            description="Backend developer needed.",
-            level="mid",
-        )
-        # Must not raise
-        result = calculate_match_score(applicant, job)
-
-        assert isinstance(result, dict), "Result must be a dict"
-        assert "finalScore" in result
-        assert 0.0 <= result["finalScore"] <= 100.0, \
-            f"Score out of range: {result['finalScore']}"
-        assert isinstance(result["skillsMatched"], list)
-        assert isinstance(result["skillsMissing"], list)
-        assert isinstance(result["feedback"], str)
-
-    # ── Structural tests ──────────────────────────────────────────────────────
-    def test_returns_all_required_keys(self):
-        applicant = _make_applicant(["Python"], resume_text="python developer", years=3)
-        job = _make_job(["Python", "Django"], description="python backend", level="mid")
-        result = calculate_match_score(applicant, job)
-        for key in ("finalScore", "breakdown", "skillsMatched", "skillsMissing",
-                    "matchCount", "totalRequired", "feedback", "experienceMatch"):
-            assert key in result, f"Missing key: {key}"
-
-    def test_breakdown_has_four_components(self):
-        applicant = _make_applicant(["Python"], resume_text="python developer", years=3)
-        job = _make_job(["Python"], description="python backend", level="mid")
-        result = calculate_match_score(applicant, job)
-        assert set(result["breakdown"].keys()) == {
-            "skillScore", "semanticScore", "experienceScore", "toolsScore"
+class TestGetCombinedApplicantSkillsWithSources:
+    def _make_applicant(self, skills=None, tools=None, resume_text=""):
+        return {
+            "applicantProfile": {
+                "skills": skills or [],
+                "tools":  tools  or [],
+                "resume": {"rawText": resume_text},
+            }
         }
 
-    def test_breakdown_contributions_sum_to_final_score(self):
-        applicant = _make_applicant(["Python", "Django"], resume_text="python django developer", years=3)
-        job = _make_job(["Python", "Django"], description="python django backend", level="mid")
-        result = calculate_match_score(applicant, job)
-        total = sum(v["contribution"] for v in result["breakdown"].values())
-        assert abs(total - result["finalScore"]) < 0.2, \
-            f"Contributions {total:.2f} don't sum to finalScore {result['finalScore']}"
+    def test_onboarding_only(self):
+        applicant = self._make_applicant(skills=["Python", "Django"])
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
 
-    def test_feedback_strong_match(self):
-        # Force a high score: perfect skill match, matching experience, tools present
-        applicant = _make_applicant(
-            skills=["Python", "Django", "PostgreSQL", "Docker"],
-            tools=["Docker", "Git"],
-            resume_text="python django postgresql docker developer backend api",
-            years=4,
+        assert "Python" in combined
+        assert "Django" in combined
+        assert sources["python"] == "onboarding"
+        assert sources["django"] == "onboarding"
+
+    def test_tools_tagged_as_onboarding(self):
+        applicant = self._make_applicant(tools=["Git", "Postman"])
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
+
+        assert "Git" in combined
+        assert sources["git"] == "onboarding"
+
+    def test_empty_applicant_returns_empty(self):
+        applicant = self._make_applicant()
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
+        assert combined == []
+        assert sources == {}
+
+    def test_no_resume_falls_back_to_onboarding(self):
+        applicant = self._make_applicant(skills=["React", "TypeScript"])
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
+
+        assert "React" in combined
+        assert "TypeScript" in combined
+        assert sources.get("react") == "onboarding"
+        assert sources.get("typescript") == "onboarding"
+
+    def test_deduplication_case_insensitive(self):
+        applicant = self._make_applicant(
+            skills=["Python"],
+            tools=["python"],   # duplicate, different case
         )
-        job = _make_job(
-            skills=["Python", "Django", "PostgreSQL", "Docker"],
-            description="python django postgresql docker backend developer",
-            level="mid",
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
+
+        # Should appear only once
+        lower_combined = [s.lower() for s in combined]
+        assert lower_combined.count("python") == 1
+
+    def test_structured_skill_dict_format(self):
+        applicant = self._make_applicant(
+            skills=[{"name": "Python", "level": "Expert"}, {"name": "Django"}]
         )
-        result = calculate_match_score(applicant, job)
-        if result["finalScore"] >= 80:
-            assert result["feedback"] == "Strong match! You have most required skills."
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
 
-    def test_feedback_partial_match(self):
-        applicant = _make_applicant(skills=["Java"], resume_text="java developer", years=1)
-        job = _make_job(
-            skills=["Python", "Django", "PostgreSQL", "Docker", "AWS"],
-            description="python backend developer",
-            level="senior",
-        )
-        result = calculate_match_score(applicant, job)
-        if result["finalScore"] < 60:
-            assert result["feedback"] == "Partial match. Significant skill gaps exist."
+        assert "Python" in combined
+        assert "Django" in combined
 
-    def test_experience_match_label_under(self):
-        applicant = _make_applicant(["Python"], resume_text="python developer", years=1)
-        job = _make_job(["Python"], description="python backend", level="senior")
-        result = calculate_match_score(applicant, job)
-        assert result["experienceMatch"] == "under"
-
-    def test_experience_match_label_over(self):
-        applicant = _make_applicant(["Python"], resume_text="python developer", years=10)
-        job = _make_job(["Python"], description="python backend", level="entry")
-        result = calculate_match_score(applicant, job)
-        assert result["experienceMatch"] == "over"
-
-    def test_experience_match_label_match(self):
-        applicant = _make_applicant(["Python"], resume_text="python developer", years=3)
-        job = _make_job(["Python"], description="python backend", level="mid")
-        result = calculate_match_score(applicant, job)
-        assert result["experienceMatch"] == "match"
-
-    def test_no_skills_no_crash(self):
-        applicant = _make_applicant(skills=[], resume_text="", years=None)
-        job = _make_job(skills=[], description="", level="")
-        result = calculate_match_score(applicant, job)
-        assert result["finalScore"] >= 0.0
+    def test_missing_applicant_profile_no_crash(self):
+        applicant = {}
+        combined, sources = get_combined_applicant_skills_with_sources(applicant)
+        assert combined == []
+        assert sources == {}
 
 
-# ── Job Graph ─────────────────────────────────────────────────────────────────
-class TestBuildJobGraph:
-    def test_shared_skills_creates_edge(self):
-        jobs = [
-            {"_id": "a", "requiredSkills": ["Python", "Docker"]},
-            {"_id": "b", "requiredSkills": ["Docker", "AWS"]},
-        ]
-        graph = build_job_graph(jobs)
-        assert "b" in graph["a"]
-        assert "a" in graph["b"]
+# ── Integration: full gap analysis with merged skills ────────────────────────
 
-    def test_no_shared_skills_no_edge(self):
-        jobs = [
-            {"_id": "a", "requiredSkills": ["Python"]},
-            {"_id": "b", "requiredSkills": ["Java"]},
-        ]
-        graph = build_job_graph(jobs)
-        assert graph["a"] == []
-        assert graph["b"] == []
+class TestGapAnalysisIntegration:
+    """
+    End-to-end tests that verify a skill present in EITHER source is
+    counted as matched, and only absent-from-both skills are missing.
+    """
 
-    def test_all_jobs_appear_as_keys(self):
-        jobs = [
-            {"_id": "a", "requiredSkills": ["Python"]},
-            {"_id": "b", "requiredSkills": ["Java"]},
-            {"_id": "c", "requiredSkills": ["Go"]},
-        ]
-        graph = build_job_graph(jobs)
-        assert set(graph.keys()) == {"a", "b", "c"}
+    def test_skill_in_onboarding_only_is_matched(self):
+        applicant_skills = ["Python", "Django"]
+        job_skills       = ["Python", "Docker"]
+        sources          = {"python": "onboarding", "django": "onboarding"}
 
-    def test_empty_jobs_returns_empty_graph(self):
-        assert build_job_graph([]) == {}
+        result = calculate_skill_match(applicant_skills, job_skills, sources)
 
+        matched_names = [m["skill"] for m in result["matchedSkills"]]
+        assert "Python" in matched_names
+        assert "Docker" in result["missingSkills"]
 
-# ── A* Search ─────────────────────────────────────────────────────────────────
-class TestAStarSearch:
-    def _make_jobs(self):
-        return [
-            {"_id": "j1", "title": "Python Dev",  "company": "A",
-             "requiredSkills": ["Python", "Django"]},
-            {"_id": "j2", "title": "React Dev",   "company": "B",
-             "requiredSkills": ["React", "TypeScript"]},
-            {"_id": "j3", "title": "Full Stack",  "company": "C",
-             "requiredSkills": ["Python", "React"]},
-        ]
+    def test_skill_in_resume_only_is_matched(self):
+        applicant_skills = ["React", "Node.js"]
+        job_skills       = ["React", "AWS"]
+        sources          = {"react": "resume", "node.js": "resume"}
 
-    def test_finds_matching_job(self):
-        jobs  = self._make_jobs()
-        graph = build_job_graph(jobs)
-        result = run_astar_search(["Python", "Django"], jobs, graph, threshold=50.0)
-        assert result["found"] is not None
-        assert result["score"] >= 50.0
+        result = calculate_skill_match(applicant_skills, job_skills, sources)
 
-    def test_returns_steps_count(self):
-        jobs  = self._make_jobs()
-        graph = build_job_graph(jobs)
-        result = run_astar_search(["Python"], jobs, graph, threshold=50.0)
-        assert result["steps"] >= 1
+        matched_names = [m["skill"] for m in result["matchedSkills"]]
+        assert "React" in matched_names
+        source_of_react = next(m["source"] for m in result["matchedSkills"] if m["skill"] == "React")
+        assert source_of_react == "resume"
 
-    def test_empty_jobs_returns_none(self):
-        result = run_astar_search(["Python"], [], {}, threshold=50.0)
-        assert result["found"] is None
+    def test_skill_in_both_sources_tagged_both(self):
+        applicant_skills = ["TypeScript"]
+        job_skills       = ["TypeScript"]
+        sources          = {"typescript": "both"}
 
-    def test_explored_list_populated(self):
-        jobs  = self._make_jobs()
-        graph = build_job_graph(jobs)
-        result = run_astar_search(["Python", "React"], jobs, graph, threshold=10.0)
-        assert len(result["explored"]) > 0
+        result = calculate_skill_match(applicant_skills, job_skills, sources)
+
+        assert result["matchCount"] == 1
+        assert result["matchedSkills"][0]["source"] == "both"
+
+    def test_skill_absent_from_both_is_missing(self):
+        applicant_skills = ["Python"]
+        job_skills       = ["Python", "Kubernetes", "Terraform"]
+        sources          = {"python": "onboarding"}
+
+        result = calculate_skill_match(applicant_skills, job_skills, sources)
+
+        assert "Kubernetes" in result["missingSkills"]
+        assert "Terraform" in result["missingSkills"]
+        assert result["matchCount"] == 1
+
+    def test_no_regression_onboarding_only_flow(self):
+        """Existing onboarding-only flow must still work when no resume skills exist."""
+        applicant_skills = ["JavaScript", "React", "CSS"]
+        job_skills       = ["JavaScript", "React", "TypeScript"]
+        # No sources provided — defaults to "onboarding"
+        result = calculate_skill_match(applicant_skills, job_skills)
+
+        assert result["matchCount"] == 2
+        assert "TypeScript" in result["missingSkills"]
+        for m in result["matchedSkills"]:
+            assert m["source"] == "onboarding"

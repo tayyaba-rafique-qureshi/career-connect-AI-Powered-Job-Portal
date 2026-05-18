@@ -42,6 +42,7 @@ from services.skill_extractor import (
     calculate_skill_match,
     normalize_skills_list,
     get_combined_applicant_skills,
+    get_combined_applicant_skills_with_sources,
     extract_experience_from_text,
     extract_seniority_from_text,
     calculate_ats_score,
@@ -309,7 +310,10 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
     # Combine structured onboarding skills + resume text skills + tools
     # so the skill match component sees everything the applicant knows,
     # not just what they explicitly listed during onboarding.
-    applicant_skills: list[str] = get_combined_applicant_skills(applicant_data)
+    # Also get the source map so matched skills can be tagged with their origin.
+    applicant_skills: list[str]
+    skill_source_map: dict[str, str]
+    applicant_skills, skill_source_map = get_combined_applicant_skills_with_sources(applicant_data)
     applicant_tools: list[str]  = [
         t for t in (profile.get("tools") or []) if isinstance(t, str) and t.strip()
     ]
@@ -349,9 +353,9 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
     ]
 
     # ── Component 1: Skill match (40%) ────────────────────────────────────────
-    skill_result  = calculate_skill_match(applicant_skills, job_skills)
+    skill_result  = calculate_skill_match(applicant_skills, job_skills, skill_source_map)
     skill_score   = skill_result["matchScore"]
-    skills_matched = skill_result["matchedSkills"]
+    skills_matched = skill_result["matchedSkills"]   # list[dict] with "skill" + "source"
     skills_missing = skill_result["missingSkills"]
     match_count    = skill_result["matchCount"]
     total_required = skill_result["totalRequired"]
