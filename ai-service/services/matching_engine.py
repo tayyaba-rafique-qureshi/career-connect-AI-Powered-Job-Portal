@@ -517,9 +517,6 @@ def calculate_match_score(applicant_data: dict, job_data: dict) -> dict:
         "totalRequired":       total_required,
         "feedback":            feedback,
         "experienceMatch":     exp_match_label,
-        "experienceMatch":     exp_match_label,
-        "experienceSummary":   exp_summary,
         "atsKeywordsMatched":  ats_result.get("keywordsMatched", []),
         "atsKeywordsMissing":  ats_result.get("keywordsMissing", []),
-        "atsTotalKeywords":    ats_result.get("totalKeywords", 0),
     }

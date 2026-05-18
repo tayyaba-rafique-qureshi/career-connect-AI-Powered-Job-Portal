@@ -1,6 +1,10 @@
 const dotenv = require('dotenv')
 dotenv.config()
 
+// Raise the default max listeners — concurrent AI requests each add listeners
+// to the underlying http/https agent sockets; the default of 10 is too low.
+require('events').EventEmitter.defaultMaxListeners = 30
+
 const express = require('express')
 const cors = require('cors')
 const mongoose = require('mongoose')

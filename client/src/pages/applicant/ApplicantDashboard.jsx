@@ -134,19 +134,6 @@ export default function ApplicantDashboard() {
       .finally(() => setMatchLoading(false))
   }, [selectedJob])
 
-  // ── Eager batch AI scores for all visible jobs (mobile cards) ─────────────
-  useEffect(() => {
-    if (filteredJobs.length === 0) return
-    filteredJobs.forEach(job => {
-      const id = job._id
-      if (matchCache.current[id]) {
-        setMatchData(prev => prev[id] ? prev : { ...prev, [id]: matchCache.current[id] })
-        return
-      }
-      getAIMatch(id).then(data => { matchCache.current[id] = data; setMatchData(prev => ({ ...prev, [id]: data })) }).catch(() => {})
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredJobs])
 
   // ── Filter + search + recommendations ────────────────────────────────────
   useEffect(() => {

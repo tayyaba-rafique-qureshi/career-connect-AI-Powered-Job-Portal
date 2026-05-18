@@ -150,6 +150,31 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
     applicant = _get_applicant(db, payload.applicant_id)
     job       = _get_job(db, payload.job_id)
 
+    # ── Backfill rawText for users who onboarded before extraction was live ───
+    # If the applicant has a resume fileId but no rawText, extract it now and
+    # save it to MongoDB so every future match also benefits.
+    resume_info = (applicant.get("applicantProfile") or {}).get("resume") or {}
+    has_raw_text = bool((resume_info.get("rawText") or "").strip())
+    file_id      = resume_info.get("fileId") or resume_info.get("gridfsId")
+
+    if not has_raw_text and file_id:
+        print(f"[/match] backfilling rawText for applicant {payload.applicant_id}")
+        try:
+            from services.extraction import extract_text_from_gridfs
+            extracted = extract_text_from_gridfs(str(file_id), db)
+            if extracted and extracted.strip():
+                db["users"].update_one(
+                    {"_id": applicant["_id"]},
+                    {"$set": {"applicantProfile.resume.rawText": extracted}},
+                )
+                # Patch the in-memory dict so this request also benefits
+                applicant.setdefault("applicantProfile", {}).setdefault("resume", {})["rawText"] = extracted
+                print(f"[/match] rawText backfilled: {len(extracted)} chars")
+            else:
+                print(f"[/match] backfill found no text (image-based PDF?)")
+        except Exception as _exc:
+            print(f"[/match] backfill failed (non-fatal): {_exc}")
+
     # ── Delegate all scoring to the matching engine ───────────────────────────
     result = calculate_match_score(applicant_data=applicant, job_data=job)
 
@@ -630,34 +655,29 @@ async def debug_skills(payload: _DebugSkillsRequest, db: Database = Depends(get_
 
     # ── Skills extracted from resume text ────────────────────────────────────
     resume_text: str = (
-        applicant.get("applicantProfile", {})
-        .get("resume", {})
-        .get("rawText", "")
-        or ""
+        applicant.get("applicantProfile", {}).get("resume", {}).get("rawText", "") or ""
     )
     skills_from_text = extract_skills_from_text(resume_text)
 
-    # ── Combined applicant skills (profile + text, deduplicated) ─────────────
-    # Text-extracted skills supplement structured profile skills; they do
-    # NOT replace them.  Profile skills take precedence for ordering.
+    # Combined applicant skills (profile + text, deduplicated)
     combined_lower: set[str] = {s.lower() for s in skills_normalized}
     supplemental   = [s for s in skills_from_text if s.lower() not in combined_lower]
     all_applicant_skills = skills_normalized + supplemental
 
-    # ── Match breakdown ───────────────────────────────────────────────────────
     match_breakdown = calculate_skill_match(all_applicant_skills, job_skills)
 
     print(
         f"[/debug-skills] profile_skills={len(skills_normalized)}  "
         f"text_skills={len(skills_from_text)}  "
-        f"job_skills={len(job_skills)}  "
-        f"matchScore={match_breakdown['matchScore']}"
+        f"job_skills={len(job_skills)}"
     )
 
     return {
-        "applicantSkillsRaw":            skills_raw,
-        "applicantSkillsNormalized":     skills_normalized,
-        "jobRequiredSkills":             job_skills,
+        "applicantId":               payload.applicant_id,
+        "jobId":                     payload.job_id,
+        "applicantSkillsRaw":        skills_raw,
+        "applicantSkillsNormalized": skills_normalized,
+        "jobRequiredSkills":         job_skills,
         "skillsExtractedFromResumeText": skills_from_text,
-        "matchBreakdown":                match_breakdown,
+        "matchBreakdown":            match_breakdown,
     }

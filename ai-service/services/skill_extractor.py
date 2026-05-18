@@ -738,123 +738,86 @@ def calculate_ats_score(
     return {
         "atsScore":        ats_score,
         "keywordsMatched": skill_matches + desc_matches,
-        "keywordsMissing": skill_missing,
+        "keywordsMissing": skill_missing + [k for k in desc_keywords if k not in desc_matches],
         "totalKeywords":   len(job_skills) + len(desc_keywords),
     }
 
 
-def extract_work_experience(text: str) -> list[dict]:
-    """
-    Extract structured work experience entries from resume text.
-
-    Looks for date ranges in the format MM/YYYY - MM/YYYY (or Present/Current)
-    and infers the role and company from the lines immediately preceding each
-    date range.
-
-    Parameters
-    ----------
-    text : str
-        Raw resume text.
-
-    Returns
-    -------
-    list[dict]
-        Each entry has: role, company, years, startDate, endDate, current.
-        Entries are in the order they appear in the text (most recent first
-        if the resume is in reverse-chronological order).
-    """
-    import re
-    from datetime import datetime
-
-    entries: list[dict] = []
-
-    # Date range pattern: MM/YYYY - MM/YYYY  or  MM/YYYY – Present/Current
-    date_pattern = r"(\d{2}/\d{4})\s*[-–]\s*(\d{2}/\d{4}|Present|present|Current|current)"
-    matches = list(re.finditer(date_pattern, text))
-
-    for match in matches:
-        start_str = match.group(1)
-        end_str   = match.group(2)
-
-        try:
-            start_date = datetime.strptime(start_str, "%m/%Y")
-            if end_str.lower() in ("present", "current"):
-                end_date = datetime.now()
-                current  = True
-            else:
-                end_date = datetime.strptime(end_str, "%m/%Y")
-                current  = False
-
-            years = round((end_date - start_date).days / 365.25, 1)
-
-            # Infer role and company from the lines immediately before the date range
-            text_before  = text[max(0, match.start() - 200): match.start()]
-            lines_before = [l.strip() for l in text_before.split("\n") if l.strip()]
-            role    = lines_before[-1] if lines_before else "Unknown Role"
-            company = lines_before[-2] if len(lines_before) >= 2 else None
-
-            entries.append({
-                "role":      role,
-                "company":   company,
-                "years":     years,
-                "startDate": start_str,
-                "endDate":   end_str,
-                "current":   current,
-            })
-        except Exception:
-            continue
-
-    return entries
-
-
 def get_experience_summary(applicant_data: dict) -> dict:
     """
-    Build a complete experience summary combining resume text and onboarding data.
+    Return a structured summary of an applicant's experience level.
 
-    Resume text is the primary source; onboarding profile is the fallback.
-    Returns an ExperienceSummary-compatible dict.
-
-    Parameters
-    ----------
-    applicant_data : dict
-        Full applicant MongoDB document.
+    Tries three sources in priority order:
+      1. Resume text  — numeric year extraction (most reliable)
+      2. Resume text  — seniority keyword signals
+      3. Onboarding   — yearsOfExp dropdown value (least reliable)
 
     Returns
     -------
-    dict with keys: totalYears, seniorityLevel, primaryRole,
-                    experienceEntries, source
+    dict with keys:
+        totalYears    : float | None   — best estimate of years of experience
+        seniorityLevel: str            — "entry" | "mid" | "senior" | "lead" | "unknown"
+        source        : str            — "resume_text" | "resume_seniority" | "onboarding" | "unknown"
     """
-    profile     = applicant_data.get("applicantProfile") or {}
-    pro_info    = profile.get("professionalInfo") or {}
-    resume_text = (profile.get("resume") or {}).get("rawText") or ""
+    profile   = applicant_data.get("applicantProfile") or {}
+    pro_info  = profile.get("professionalInfo") or {}
+    resume    = profile.get("resume") or {}
+    resume_text: str = resume.get("rawText") or ""
 
-    # Primary source — structured entries parsed from resume text
-    entries     = extract_work_experience(resume_text) if resume_text else []
-    total_years = sum(e["years"] for e in entries if e.get("years"))
-
-    # If no date-range entries found, fall back to numeric extraction
-    if total_years == 0:
-        total_years = extract_experience_from_text(resume_text) or 0.0
-
-    # Map total years to a seniority level
-    if total_years >= 8:
-        seniority = "lead"
-    elif total_years >= 5:
-        seniority = "senior"
-    elif total_years >= 2:
-        seniority = "mid"
-    else:
-        seniority = "entry"
-
-    # Primary role: most recent entry from resume, or onboarding currentTitle
-    primary_role = entries[0]["role"] if entries else pro_info.get("currentTitle")
-
-    source = "resume_text" if (entries or total_years > 0) else "onboarding"
-
-    return {
-        "totalYears":        round(total_years, 1),
-        "seniorityLevel":    seniority,
-        "primaryRole":       primary_role,
-        "experienceEntries": entries,
-        "source":            source,
+    _SENIORITY_TO_YEARS = {"entry": 1.0, "mid": 3.5, "senior": 6.5, "lead": 9.0}
+    _EXP_STRING_MAP = {
+        "no experience": 0.0, "less than 1 year": 0.5, "less than a year": 0.5,
+        "1-2 years": 1.5, "1 to 2 years": 1.5, "2-3 years": 2.5,
+        "3-5 years": 4.0, "3 to 5 years": 4.0, "5-8 years": 6.5,
+        "5 to 8 years": 6.5, "8+ years": 9.0, "more than 8 years": 9.0,
+        "10+ years": 10.0,
     }
+
+    def _years_to_seniority(years: float) -> str:
+        if years < 2:   return "entry"
+        if years < 5:   return "mid"
+        if years < 8:   return "senior"
+        return "lead"
+
+    # Priority 1 — numeric years from resume text
+    if resume_text.strip():
+        years = extract_experience_from_text(resume_text)
+        if years is not None:
+            return {
+                "totalYears":     years,
+                "seniorityLevel": _years_to_seniority(years),
+                "source":         "resume_text",
+            }
+
+    # Priority 2 — seniority keyword from resume text
+    if resume_text.strip():
+        seniority = extract_seniority_from_text(resume_text)
+        if seniority:
+            years = _SENIORITY_TO_YEARS.get(seniority)
+            return {
+                "totalYears":     years,
+                "seniorityLevel": seniority,
+                "source":         "resume_seniority",
+            }
+
+    # Priority 3 — onboarding dropdown
+    raw = pro_info.get("yearsOfExp")
+    if raw is not None:
+        if isinstance(raw, (int, float)):
+            years = float(raw)
+        elif isinstance(raw, str):
+            try:
+                years = float(raw.strip())
+            except ValueError:
+                years = _EXP_STRING_MAP.get(raw.strip().lower())
+        else:
+            years = None
+
+        if years is not None:
+            return {
+                "totalYears":     years,
+                "seniorityLevel": _years_to_seniority(years),
+                "source":         "onboarding",
+            }
+
+    return {"totalYears": None, "seniorityLevel": "unknown", "source": "unknown"}
