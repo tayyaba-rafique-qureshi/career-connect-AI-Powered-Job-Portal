@@ -28,7 +28,10 @@ const analyzeMatch = async (resumeText, jobDescription) => {
 
 /**
  * Full AI match using applicant_id + job_id — preferred method.
- * Returns { matchScore, skillsMatched, skillsMissing }
+ * Returns { matchScore, skillsMatched, skillsMissing, skillsMatchedNames }
+ *
+ * skillsMatched is the full structured list: [{skill, source}, ...]
+ * skillsMatchedNames is a flat list of skill name strings for backward compat.
  */
 const matchApplicantToJob = async (applicantId, jobId) => {
   try {
@@ -38,13 +41,14 @@ const matchApplicantToJob = async (applicantId, jobId) => {
       { timeout: 15000 }
     )
     return {
-      matchScore:    data.matchScore   ?? null,
-      skillsMatched: data.skillsMatched ?? [],
-      skillsMissing: data.skillsMissing ?? []
+      matchScore:         data.matchScore          ?? null,
+      skillsMatched:      data.skillsMatched        ?? [],   // list[{skill, source}]
+      skillsMissing:      data.skillsMissing         ?? [],   // list[str]
+      skillsMatchedNames: data.skillsMatchedNames    ?? [],   // list[str] convenience field
     }
   } catch (err) {
     console.error('[AI Service] matchApplicantToJob failed:', err.message)
-    return { matchScore: null, skillsMatched: [], skillsMissing: [] }
+    return { matchScore: null, skillsMatched: [], skillsMissing: [], skillsMatchedNames: [] }
   }
 }
 

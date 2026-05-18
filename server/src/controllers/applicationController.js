@@ -51,13 +51,17 @@ exports.applyToJob = async (req, res) => {
     const aiScore = aiResult.matchScore != null ? aiResult.matchScore / 100 : null
 
     // Use AI-service skill computation if available, otherwise fall back to local compute.
+    // skillsMatched from AI service is now list[dict] {skill, source} — extract names for storage.
     const applicantSkillList = (applicant?.applicantProfile?.skills || [])
       .map(s => (typeof s === 'string' ? s : s.name || '').toLowerCase())
     const requiredSkills = job.requiredSkills || []
-    const skillsMatched = aiResult.skillsMatched.length
-      ? aiResult.skillsMatched
+
+    const rawSkillsMatched = aiResult.skillsMatched || []
+    // Normalise: AI returns [{skill, source}, ...] or legacy [string, ...]
+    const skillsMatched = rawSkillsMatched.length
+      ? rawSkillsMatched.map(s => (typeof s === 'object' && s !== null ? s.skill : s)).filter(Boolean)
       : requiredSkills.filter(s => applicantSkillList.includes(s.toLowerCase()))
-    const skillsMissing = aiResult.skillsMissing.length
+    const skillsMissing = aiResult.skillsMissing?.length
       ? aiResult.skillsMissing
       : requiredSkills.filter(s => !applicantSkillList.includes(s.toLowerCase()))
 
