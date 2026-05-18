@@ -28,18 +28,25 @@ const deleteOldResume = async (fileId) => {
   }
 }
 
-// ─── Helper: call Python AI to extract text ───────────────────────────────────
+// ─── Helper: call Python AI to extract text — kept for legacy callers ────────
+// NOTE: The primary extraction path now calls /api/ai/extract-resume directly
+// with both file_id and applicant_id so the AI service saves rawText to MongoDB.
+// This helper is no longer used by saveStep but kept to avoid breaking any
+// other callers that may reference it.
 const extractResumeText = async (fileId) => {
   try {
     const { data } = await axios.post(
-      `${process.env.AI_SERVICE_URL}/api/extract-resume`,
-      { fileId: fileId.toString() },
+      `${process.env.AI_SERVICE_URL}/api/ai/extract-resume`,
+      { file_id: fileId.toString() },
       { timeout: 30000 }
     )
-    return data.extractedText || ''
+    if (data.success && data.characterCount > 0) {
+      return data.preview || 'extracted'
+    }
+    return ''
   } catch (err) {
     console.error('[AI] Resume extraction failed:', err.message)
-    return '' // graceful fallback — PDF still saved
+    return ''
   }
 }
 
@@ -93,45 +100,68 @@ exports.saveStep = async (req, res) => {
           const filename = `resume_${req.user.id}_${Date.now()}.pdf`
           const fileId = await uploadToGridFS(buffer, filename)
 
-          // Extract text via Python AI service
-          const rawText = await extractResumeText(fileId)
-          if (!rawText || !rawText.trim()) {
-            console.warn('[Onboarding] Resume text extraction failed - AI service may be unavailable')
-            // Allow onboarding to complete without text extraction
-            // Text can be extracted later when AI service is available
-            p.resume = {
-              fileId,
-              fileName:         filename,
-              uploadedAt:       new Date(),
-              rawText:          '', // Empty but allowed - can be populated later
-              uploadedRawText:  '',
-              aiPreference:     'uploaded',
-              originalSize,
-              storedSize:       compressedSize,
-              wasCompressed:    compressed
+          // Save resume metadata first (rawText will be populated by AI service)
+          p.resume = {
+            fileId,
+            fileName:         filename,
+            uploadedAt:       new Date(),
+            rawText:          '',
+            uploadedRawText:  '',
+            aiPreference:     'uploaded',
+            originalSize,
+            storedSize:       compressedSize,
+            wasCompressed:    compressed
+          }
+
+          // Save user now so the AI service can find the user document by applicant_id
+          user.markModified('applicantProfile')
+          await user.save()
+
+          // Extract text via Python AI service — passes both file_id AND applicant_id
+          // so the AI service saves rawText directly to the user document in MongoDB.
+          try {
+            const aiUrl = `${process.env.AI_SERVICE_URL}/api/ai/extract-resume`
+            const { data: extractData } = await axios.post(
+              aiUrl,
+              { file_id: fileId.toString(), applicant_id: req.user.id.toString() },
+              { timeout: 30000 }
+            )
+            if (extractData.success && extractData.characterCount > 0) {
+              console.log(`[Onboarding] Resume text extracted: ${extractData.characterCount} chars`)
+              // rawText was saved directly to MongoDB by the AI service.
+              // Reload the resume field so our in-memory object reflects it.
+              const refreshed = await User.findById(req.user.id).select('applicantProfile.resume')
+              const savedRawText = refreshed?.applicantProfile?.resume?.rawText || ''
+              p.resume.rawText         = savedRawText
+              p.resume.uploadedRawText = savedRawText
+            } else {
+              console.warn('[Onboarding] Resume text extraction returned no content — AI service may be unavailable')
             }
-          } else {
-            p.resume = {
-              fileId,
-              fileName:         filename,
-              uploadedAt:       new Date(),
-              rawText,
-              uploadedRawText:  rawText,
-              aiPreference:     'uploaded',
-              originalSize,
-              storedSize:       compressedSize,
-              wasCompressed:    compressed
-            }
+          } catch (extractErr) {
+            console.warn('[Onboarding] Resume extraction call failed:', extractErr.message)
+            // Non-fatal — onboarding continues, rawText stays empty
           }
         } else if (isOnboarding && hasExistingResume && !p.resume?.rawText?.trim()) {
           // Try to extract text from existing resume
-          const rawText = await extractResumeText(p.resume.fileId)
-          if (!rawText || !rawText.trim()) {
-            console.warn('[Onboarding] Could not extract text from existing resume - AI service may be unavailable')
-            // Allow onboarding to complete - text can be extracted later
+          try {
+            const aiUrl = `${process.env.AI_SERVICE_URL}/api/ai/extract-resume`
+            const { data: extractData } = await axios.post(
+              aiUrl,
+              { file_id: p.resume.fileId.toString(), applicant_id: req.user.id.toString() },
+              { timeout: 30000 }
+            )
+            if (extractData.success && extractData.characterCount > 0) {
+              console.log(`[Onboarding] Existing resume text extracted: ${extractData.characterCount} chars`)
+              const refreshed = await User.findById(req.user.id).select('applicantProfile.resume')
+              const savedRawText = refreshed?.applicantProfile?.resume?.rawText || ''
+              p.resume = { ...p.resume, rawText: savedRawText, uploadedRawText: savedRawText }
+            } else {
+              console.warn('[Onboarding] Could not extract text from existing resume - AI service may be unavailable')
+              p.resume = { ...p.resume, rawText: '', uploadedRawText: '' }
+            }
+          } catch (extractErr) {
+            console.warn('[Onboarding] Existing resume extraction failed:', extractErr.message)
             p.resume = { ...p.resume, rawText: '', uploadedRawText: '' }
-          } else {
-            p.resume = { ...p.resume, rawText, uploadedRawText: rawText }
           }
         }
 
