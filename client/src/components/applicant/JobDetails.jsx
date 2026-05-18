@@ -140,7 +140,7 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
               gap: '4px',
               flexShrink: 0, overflow: 'hidden',
             }}>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: tier.color, lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap', display: 'block' }}>{score}%</span>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: tier.color, lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap', display: 'block' }}>{Math.round(score)}%</span>
               <span style={{ fontSize: '10px', fontWeight: '600', color: tier.color, lineHeight: 1, letterSpacing: '0.05em', textAlign: 'center', display: 'block' }}>MATCH</span>
             </div>
             <div>
@@ -168,14 +168,14 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
               padding: '6px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '700',
               backgroundColor: 'var(--cc-green-bg)', color: 'var(--cc-green)'
             }}>
-              Resume match: {resumeScore?.toFixed(2)}%
+              Resume match: {Math.round(resumeScore)}%
             </div>
             {skillScore != null && (
               <div style={{
                 padding: '6px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: '700',
                 backgroundColor: 'var(--cc-amber-bg)', color: 'var(--cc-amber)'
               }}>
-                Skill match: {skillScore.toFixed(2)}%
+                Skill match: {Math.round(skillScore)}%
               </div>
             )}
           </div>
@@ -187,9 +187,22 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--cc-green)', margin: '0 0 10px' }}>Skills matched</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {matchData.skillsMatched.map(s => (
-                      <SkillChip key={s} icon="✓" bg="var(--cc-green-bg)" color="var(--cc-green)">{s}</SkillChip>
-                    ))}
+                    {matchData.skillsMatched.map(s => {
+                      // Handle both new {skill, source} shape and legacy plain strings
+                      const skillName = typeof s === 'object' && s !== null ? s.skill : s
+                      const source    = typeof s === 'object' && s !== null ? s.source : null
+                      return (
+                        <SkillChip
+                          key={skillName}
+                          icon="✓"
+                          bg="var(--cc-green-bg)"
+                          color="var(--cc-green)"
+                          source={source}
+                        >
+                          {skillName}
+                        </SkillChip>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -216,7 +229,7 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
             }}>
               <p style={{ fontSize: '13px', color: 'var(--cc-text-2)', margin: 0 }}>
                 Adding {matchData.skillsMissing.length} skill{matchData.skillsMissing.length !== 1 ? 's' : ''} could improve your match to{' '}
-                <strong style={{ color: 'var(--cc-green)' }}>{Math.min(score + matchData.skillsMissing.length * 5, 99)}%</strong>
+                <strong style={{ color: 'var(--cc-green)' }}>{parseFloat(Math.min(score + matchData.skillsMissing.length * 5, 99)).toFixed(1)}%</strong>
               </p>
               <a href="/profile" style={{
                 fontSize: '13px', color: 'var(--cc-blue)', fontWeight: '600',
@@ -457,7 +470,17 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
 }
 
 /* ── Sub-components ── */
-function SkillChip({ icon, bg, color, children }) {
+
+// Source badge config — only shown for resume-sourced and both-sourced skills.
+// Onboarding skills show no badge (they are the baseline expectation).
+const SOURCE_BADGE = {
+  resume: { label: 'Resume', bg: 'rgba(20,115,51,0.12)', color: 'var(--cc-green)' },
+  both:   { label: 'Both',   bg: 'rgba(180,83,9,0.12)',  color: 'var(--cc-amber)' },
+}
+
+function SkillChip({ icon, bg, color, source, children }) {
+  // Only render a badge for resume/both — not for onboarding (no badge = cleaner UI)
+  const badge = source && SOURCE_BADGE[source] ? SOURCE_BADGE[source] : null
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -466,6 +489,16 @@ function SkillChip({ icon, bg, color, children }) {
     }}>
       <span style={{ fontSize: '11px', fontWeight: '700' }}>{icon}</span>
       {children}
+      {badge && (
+        <span style={{
+          fontSize: '10px', fontWeight: '700',
+          padding: '1px 5px', borderRadius: '6px',
+          backgroundColor: badge.bg, color: badge.color,
+          marginLeft: '2px', letterSpacing: '0.02em',
+        }}>
+          {badge.label}
+        </span>
+      )}
     </span>
   )
 }
