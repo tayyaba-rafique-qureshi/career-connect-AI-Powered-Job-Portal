@@ -133,6 +133,7 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
           {/* Score badge */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '8px' }}>
             <div style={{
+<<<<<<< HEAD
               width: '80px', height: '72px', borderRadius: '12px',
               backgroundColor: tier.bg, border: `1px solid ${tier.border}`,
               display: 'flex', flexDirection: 'column',
@@ -142,6 +143,15 @@ export default function JobDetails({ job, matchData, matchLoading, onApply, onSa
             }}>
               <span style={{ fontSize: '16px', fontWeight: '800', color: tier.color, lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap', display: 'block' }}>{score}%</span>
               <span style={{ fontSize: '10px', fontWeight: '600', color: tier.color, lineHeight: 1, letterSpacing: '0.05em', textAlign: 'center', display: 'block' }}>MATCH</span>
+=======
+              width: '64px', height: '64px', borderRadius: '12px',
+              backgroundColor: tier.bg, border: `1px solid ${tier.border}`,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '22px', fontWeight: '800', color: tier.color, lineHeight: 1 }}>{score}%</span>
+              <span style={{ fontSize: '9px', fontWeight: '600', color: tier.color, lineHeight: 1, marginTop: '2px' }}>MATCH</span>
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
             </div>
             <div>
               <p style={{ fontSize: '16px', fontWeight: '700', color: tier.color, margin: '0 0 4px' }}>{tier.label}</p>

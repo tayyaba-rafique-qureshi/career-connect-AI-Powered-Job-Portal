@@ -22,6 +22,10 @@ const STATUS_COLORS = {
 const AdminJobs = () => {
   const [searchParams] = useSearchParams()
   const isFeaturedView = searchParams.get('featured') === 'true'
+<<<<<<< HEAD
+  const jobIdFilter = searchParams.get('id') // Get job ID from URL
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
   const searchRef = useRef(null)
   
   const [jobs, setJobs] = useState([])
@@ -73,7 +77,11 @@ const AdminJobs = () => {
 
   useEffect(() => {
     fetchJobs()
+<<<<<<< HEAD
+  }, [pagination.page, filters, isFeaturedView, jobIdFilter])
+=======
   }, [pagination.page, filters, isFeaturedView])
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
   const fetchJobs = async () => {
     setLoading(true)
@@ -89,6 +97,14 @@ const AdminJobs = () => {
         params.isFeatured = 'true'
       }
       
+<<<<<<< HEAD
+      // Add job ID filter if present in URL
+      if (jobIdFilter) {
+        params.jobId = jobIdFilter
+      }
+      
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       const response = await getJobs(params)
       
       setJobs(response.data.data)
