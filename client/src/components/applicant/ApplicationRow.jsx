@@ -60,7 +60,7 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
   }
 
   return (
-    <div className="flex items-center gap-4 p-4 border-b border-[var(--cc-border)] hover:bg-[var(--cc-surface-2)] transition-colors">
+    <div className="app-row-inner flex items-center gap-4 p-4 border-b border-[var(--cc-border)] hover:bg-[var(--cc-surface-2)] transition-colors">
       {/* Company logo placeholder */}
       <div className="w-12 h-12 rounded-lg bg-[var(--cc-blue-light)] flex items-center justify-center text-[var(--cc-blue)] font-bold text-sm shrink-0">
         {(job.company || 'C').slice(0, 2).toUpperCase()}
@@ -74,7 +74,7 @@ export default function ApplicationRow({ application, onArchive, onUnarchive }) 
       </div>
 
       {/* Status + score + archive */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="app-row-right flex items-center gap-3 shrink-0">
         {employerId && (
           <Link
             to={`/messages?jobId=${job._id}&applicantId=${user?.id || user?._id}&employerId=${employerId}`}
