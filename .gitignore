@@ -7,12 +7,6 @@
 server/.env
 client/.env
 
-# ─── Always include README files ───────────────────────────────────────────────
-!README.md
-!**/README.md
-!README_*.md
-!**/README_*.md
-
 # ─── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
 client/node_modules/
@@ -59,6 +53,7 @@ tmp/
 ADMIN_MODULE_IMPLEMENTATION_SUMMARY.md
 ADMIN_MODULE_SETUP.md
 ADMIN_MODULE_TEST_CHECKLIST.md
+<<<<<<< HEAD
 .kiro/specs/admin-module/
 
 # ─── Documentation Files (local) ───────────────────────────────────────────────
@@ -73,3 +68,6 @@ REPORTS_FILTERING_DEBUG.md
 ORPHANED_REPORTS_FIX.md
 RESOLVED_TAB_FINAL_FIX.md
 VERIFICATION_FEATURE_EXPLANATION.md
+=======
+.kiro/specs/admin-module/
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3

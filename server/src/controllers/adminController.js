@@ -475,7 +475,10 @@ const getAllJobsAdmin = async (req, res) => {
       workMode,
       experienceLevel,
       isFeatured,
+<<<<<<< HEAD
       jobId,
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc'
@@ -488,9 +491,12 @@ const getAllJobsAdmin = async (req, res) => {
     if (isFeatured !== undefined && isFeatured !== '') {
       query.isFeatured = isFeatured === 'true'
     }
+<<<<<<< HEAD
     if (jobId && isValidObjectId(jobId)) {
       query._id = jobId
     }
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -1134,6 +1140,7 @@ const getJobReports = async (req, res) => {
 
 /**
  * PATCH /api/admin/jobs/:jobId/reports/:reportId/resolve
+<<<<<<< HEAD
  * Resolve a job report (from Report collection)
  */
 const resolveJobReport = async (req, res) => {
@@ -1145,10 +1152,28 @@ const resolveJobReport = async (req, res) => {
     if (!validateId(reportId, res)) return
 
     const report = await Report.findById(reportId).populate('job', 'title company')
+=======
+ * Resolve a job report
+ */
+const resolveJobReport = async (req, res) => {
+  try {
+    const { resolution, action } = req.body
+    const { jobId, reportId } = req.params
+
+    if (!validateId(jobId, res)) return
+
+    const job = await Job.findById(jobId)
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' })
+    }
+
+    const report = job.adminReports.id(reportId)
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found' })
     }
 
+<<<<<<< HEAD
     // Set status based on action
     report.status = action === 'dismiss' ? 'dismissed' : 'resolved'
     report.resolved = true
@@ -1165,10 +1190,19 @@ const resolveJobReport = async (req, res) => {
     await report.save()
     
     console.log('[resolveJobReport] Report saved with status:', report.status)
+=======
+    report.status = action === 'dismiss' ? 'dismissed' : 'resolved'
+    report.resolution = resolution
+    report.resolvedBy = req.user.id
+    report.resolvedAt = new Date()
+
+    await job.save()
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
     await logAdminAction(
       req.user.id,
       'JOB_REPORT_RESOLVED',
+<<<<<<< HEAD
       'report',
       report._id,
       { 
@@ -1177,12 +1211,22 @@ const resolveJobReport = async (req, res) => {
         action, 
         resolution 
       }
+=======
+      'job',
+      job._id,
+      { reportId, action, resolution }
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     )
 
     res.json({
       success: true,
+<<<<<<< HEAD
       message: `Report ${action === 'dismiss' ? 'dismissed' : 'resolved'} successfully`,
       data: report
+=======
+      message: 'Report resolved successfully',
+      data: job
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     })
   } catch (error) {
     console.error('Error resolving job report:', error)
@@ -1192,6 +1236,7 @@ const resolveJobReport = async (req, res) => {
 
 /**
  * GET /api/admin/job-reports
+<<<<<<< HEAD
  * Get all job reports with filters (from Report collection)
  */
 const getAllJobReports = async (req, res) => {
@@ -1337,6 +1382,71 @@ const getAllJobReports = async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         pages: Math.ceil(totalValid / parseInt(limit))
+=======
+ * Get all job reports with filters
+ */
+const getAllJobReports = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, category, severity } = req.query
+
+    const matchStage = { 'adminReports.0': { $exists: true } }
+    
+    const jobs = await Job.aggregate([
+      { $match: matchStage },
+      { $unwind: '$adminReports' },
+      {
+        $match: {
+          ...(status && { 'adminReports.status': status }),
+          ...(category && { 'adminReports.category': category }),
+          ...(severity && { 'adminReports.severity': severity })
+        }
+      },
+      { $sort: { 'adminReports.reportedAt': -1 } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'adminReports.reportedBy',
+          foreignField: '_id',
+          as: 'reportedByUser'
+        }
+      },
+      {
+        $project: {
+          jobId: '$_id',
+          title: 1,
+          company: 1,
+          report: '$adminReports',
+          reportedBy: { $arrayElemAt: ['$reportedByUser', 0] }
+        }
+      },
+      { $skip: (parseInt(page) - 1) * parseInt(limit) },
+      { $limit: parseInt(limit) }
+    ])
+
+    const totalCount = await Job.aggregate([
+      { $match: matchStage },
+      { $unwind: '$adminReports' },
+      {
+        $match: {
+          ...(status && { 'adminReports.status': status }),
+          ...(category && { 'adminReports.category': category }),
+          ...(severity && { 'adminReports.severity': severity })
+        }
+      },
+      { $count: 'total' }
+    ])
+
+    const total = totalCount[0]?.total || 0
+
+    res.json({
+      success: true,
+      data: jobs,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       }
     })
   } catch (error) {

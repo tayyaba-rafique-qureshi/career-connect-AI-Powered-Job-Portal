@@ -1,9 +1,16 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from 'react'
+=======
+import { useState, useEffect } from 'react'
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 import { useNavigate, useParams } from 'react-router-dom'
 import EmployerLayout from '../../components/employer/EmployerLayout'
 import TagInput from '../../components/onboarding/TagInput'
 import Toast from '../../components/employer/Toast'
+<<<<<<< HEAD
 import NoCreditsModal from '../../components/recruiter/NoCreditsModal'
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 import api from '../../services/api'
 import {
   Briefcase, MapPin, Users, Monitor, FileText, Building2,
@@ -43,8 +50,11 @@ export default function PostJob() {
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast]     = useState(null)
   const [errors, setErrors]   = useState({})
+<<<<<<< HEAD
   const [showNoCredits, setShowNoCredits] = useState(false)
   const creditsBadgeRef = useRef(null)
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
   // Load existing job when editing
   useEffect(() => {
@@ -114,19 +124,26 @@ export default function PostJob() {
         await api.post('/jobs', payload)
       }
 
+<<<<<<< HEAD
       // Refresh the credits badge after a successful post (1 credit was deducted)
       creditsBadgeRef.current?.refresh()
 
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       navigate('/dashboard/recruiter/jobs', {
         state: { toast: isEdit ? 'Job updated successfully.' : status === 'active' ? 'Job posted successfully!' : 'Job saved as draft.' }
       })
     } catch (err) {
+<<<<<<< HEAD
       // NO_CREDITS: show the purchase modal instead of a generic error toast
       if (err.response?.status === 403 && err.response?.data?.error === 'NO_CREDITS') {
         setShowNoCredits(true)
       } else {
         setToast({ message: err.response?.data?.message || 'Failed to save job. Please try again.', type: 'error' })
       }
+=======
+      setToast({ message: err.response?.data?.message || 'Failed to save job. Please try again.', type: 'error' })
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
     } finally {
       setSubmitting(false)
     }
@@ -152,7 +169,10 @@ export default function PostJob() {
   return (
     <EmployerLayout>
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+<<<<<<< HEAD
       {showNoCredits && <NoCreditsModal onClose={() => setShowNoCredits(false)} />}
+=======
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1A1A2E]">

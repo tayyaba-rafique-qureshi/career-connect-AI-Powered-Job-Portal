@@ -9,7 +9,11 @@ const AdminJobReports = () => {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 })
+<<<<<<< HEAD
   const [filters, setFilters] = useState({ category: '', severity: '' })
+=======
+  const [filters, setFilters] = useState({ status: 'open', category: '', severity: '' })
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
   const [toast, setToast] = useState(null)
   const [activeTab, setActiveTab] = useState('open')
   const [resolveModal, setResolveModal] = useState({ isOpen: false, report: null, action: '' })
@@ -25,6 +29,7 @@ const AdminJobReports = () => {
       const params = {
         page: pagination.page,
         limit: pagination.limit,
+<<<<<<< HEAD
         status: activeTab  // Use activeTab as the status
         // Don't spread filters here as it might override status
       }
@@ -33,6 +38,11 @@ const AdminJobReports = () => {
       if (filters.category) params.category = filters.category
       if (filters.severity) params.severity = filters.severity
       
+=======
+        status: activeTab,
+        ...filters
+      }
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
       const response = await getAllJobReports(params)
       setReports(response.data.data)
       setPagination(prev => ({ ...prev, ...response.data.pagination }))
@@ -177,9 +187,13 @@ const AdminJobReports = () => {
                   <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
                     <span>Category: <span className="font-medium">{getCategoryLabel(item.report.category)}</span></span>
                     <span>•</span>
+<<<<<<< HEAD
                     <span>Reported by: <span className="font-medium">
                       {item.reportedBy?.name || item.reportedBy?.email || 'Unknown User'}
                     </span></span>
+=======
+                    <span>Reported by: <span className="font-medium">{item.reportedBy?.name || 'Unknown'}</span></span>
+>>>>>>> f9873058d0e7eb905fe9fba20468adc7056e7fa3
                     <span>•</span>
                     <span>{new Date(item.report.reportedAt).toLocaleDateString()}</span>
                   </div>
