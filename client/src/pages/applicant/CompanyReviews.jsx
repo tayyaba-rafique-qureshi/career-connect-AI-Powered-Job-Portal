@@ -24,7 +24,7 @@ function StarRating({ rating, size = 14 }) {
 function RatingBar({ label, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-      <span style={{ fontSize: '13px', color: 'var(--cc-text-2)', width: '140px', flexShrink: 0 }}>{label}</span>
+      <span className="cr-rating-label" style={{ fontSize: '13px', color: 'var(--cc-text-2)', width: '140px', flexShrink: 0 }}>{label}</span>
       <div style={{ flex: 1, height: '8px', backgroundColor: 'var(--cc-border)', borderRadius: '4px', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
@@ -54,7 +54,7 @@ function ReviewCard({ review }) {
       padding: '20px',
       marginBottom: '12px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+      <div className="cr-card-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
         <div>
           <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--cc-text-1)', margin: '0 0 4px' }}>
             {review.title}
@@ -80,7 +80,7 @@ function ReviewCard({ review }) {
 
       {/* Pros / Cons */}
       {(review.pros || review.cons) && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', margin: '12px 0' }}>
+        <div className="cr-pros-cons" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', margin: '12px 0' }}>
           {review.pros && (
             <div>
               <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--cc-green)', margin: '0 0 4px' }}>Pros</p>
@@ -238,9 +238,55 @@ export default function CompanyReviews() {
     }}>
       <Navbar />
 
+      {/* ── Mobile-only layout fixes ── */}
+      <style>{`
+        @media (max-width: 768px) {
+          /* Hero: reduce horizontal padding */
+          .cr-hero { padding: 24px 16px 20px !important; }
+
+          /* Search bar: full width, no overflow */
+          .cr-search-wrap { max-width: 100% !important; }
+
+          /* Content area: single column, no side-by-side */
+          .cr-content {
+            flex-direction: column !important;
+            padding: 16px !important;
+            gap: 16px !important;
+          }
+
+          /* Left company list: full width, not fixed 380px */
+          .cr-left {
+            width: 100% !important;
+            flex-shrink: 1 !important;
+          }
+
+          /* Right reviews panel: full width, same as left */
+          .cr-right { min-width: 0 !important; width: 100% !important; }
+
+          /* Review controls: wrap on small screens */
+          .cr-controls {
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+          }
+          .cr-controls-right {
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+          }
+
+          /* Rating bar label: shorter on mobile */
+          .cr-rating-label { width: 110px !important; }
+
+          /* Review card header: allow wrapping */
+          .cr-card-header { flex-wrap: wrap !important; gap: 6px !important; }
+
+          /* Pros/Cons grid: single column on mobile */
+          .cr-pros-cons { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       <div style={{ paddingTop: '60px' }}>
         {/* Hero */}
-        <div style={{
+        <div className="cr-hero" style={{
           background: 'var(--cc-bg-gradient)',
           padding: '40px 40px 32px',
           textAlign: 'center',
@@ -254,7 +300,7 @@ export default function CompanyReviews() {
 
           {/* Search */}
           <form onSubmit={handleSearch} style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{
+            <div className="cr-search-wrap" style={{
               display: 'flex', alignItems: 'center',
               backgroundColor: 'var(--cc-surface)', borderRadius: '8px',
               boxShadow: 'var(--cc-shadow)',
@@ -282,10 +328,10 @@ export default function CompanyReviews() {
         </div>
 
         {/* Content */}
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 40px', display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+        <div className="cr-content" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 40px', display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
 
           {/* Left — company list */}
-          <div style={{ width: '380px', flexShrink: 0 }}>
+          <div className="cr-left" style={{ width: '380px', flexShrink: 0 }}>
             <p style={{ fontSize: '13px', color: 'var(--cc-text-3)', margin: '0 0 12px' }}>
               {loading ? 'Loading...' : `${companies.length} compan${companies.length !== 1 ? 'ies' : 'y'}`}
             </p>
@@ -310,7 +356,7 @@ export default function CompanyReviews() {
           </div>
 
           {/* Right — reviews */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="cr-right" style={{ flex: 1, minWidth: 0 }}>
             {!selected ? (
               <div style={{
                 backgroundColor: 'var(--cc-surface)', border: '1px solid var(--cc-border)',
@@ -362,11 +408,11 @@ export default function CompanyReviews() {
                 </div>
 
                 {/* Reviews controls */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div className="cr-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--cc-text-1)', margin: 0 }}>
                     {displayedReviews.length} review{displayedReviews.length !== 1 ? 's' : ''}
                   </p>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div className="cr-controls-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <a href="/dashboard/applicant" style={{
                       fontSize: '13px', color: 'var(--cc-blue)', fontWeight: '600',
                       textDecoration: 'none', padding: '6px 14px',
