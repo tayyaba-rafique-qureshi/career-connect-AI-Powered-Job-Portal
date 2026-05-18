@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Search, MapPin, SlidersHorizontal, HelpCircle, FileText, User } from 'lucide-react'
+import { Search, MapPin, SlidersHorizontal, HelpCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/shared/Navbar'
+import MobileHeader from '../../components/mobile/MobileHeader'
+import MobileNavBar from '../../components/mobile/MobileNavBar'
+import useIsMobile from '../../hooks/useIsMobile'
 import JobCard from '../../components/applicant/JobCard'
 import JobDetails from '../../components/applicant/JobDetails'
 import FilterModal from '../../components/applicant/FilterModal'
@@ -16,7 +19,18 @@ const SORT_OPTIONS = [
   { value: 'relevance', label: 'Relevance' },
 ]
 
-// ── No-jobs illustration ──────────────────────────────────────────────────
+const WORK_MODE_PILLS = [
+  { label: 'Remote',  value: 'remote'  },
+  { label: 'On-site', value: 'on-site' },
+  { label: 'Hybrid',  value: 'hybrid'  },
+]
+const JOB_TYPE_PILLS = [
+  { label: 'Full-time',  value: 'full-time'  },
+  { label: 'Part-time',  value: 'part-time'  },
+  { label: 'Contract',   value: 'contract'   },
+  { label: 'Internship', value: 'internship' },
+]
+
 const NoJobsSVG = () => (
   <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
     <circle cx="36" cy="36" r="24" stroke="var(--cc-blue-border)" strokeWidth="6" fill="none" />
@@ -41,38 +55,44 @@ export default function ApplicantDashboard() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const [jobs, setJobs]               = useState([])
-  const [filteredJobs, setFilteredJobs] = useState([])
-  const [selectedJob, setSelectedJob] = useState(null)
-  const [matchData, setMatchData]     = useState({})
-  const [matchLoading, setMatchLoading] = useState(false)
-  const [savedIds, setSavedIds]       = useState(new Set())
-  const [appliedIds, setAppliedIds]   = useState(new Set())
-  const [loading, setLoading]         = useState(true)
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [sort, setSort]               = useState('date')
-  const [filters, setFilters]         = useState({ jobType: [], experienceLevel: '', workMode: '', salaryMin: 0, salaryMax: 500000 })
-  const [filterOpen, setFilterOpen]   = useState(false)
+  const isMobile = useIsMobile()
+
+  const [jobs, setJobs]                     = useState([])
+  const [filteredJobs, setFilteredJobs]     = useState([])
+  const [selectedJob, setSelectedJob]       = useState(null)
+  const [matchData, setMatchData]           = useState({})
+  const [matchLoading, setMatchLoading]     = useState(false)
+  const [savedIds, setSavedIds]             = useState(new Set())
+  const [appliedIds, setAppliedIds]         = useState(new Set())
+  const [loading, setLoading]               = useState(true)
+  const [searchLoading, setSearchLoading]   = useState(false)
+  const [sort, setSort]                     = useState('date')
+  const [filters, setFilters]               = useState({ jobType: [], experienceLevel: '', workMode: '', salaryMin: 0, salaryMax: 500000 })
+  const [filterOpen, setFilterOpen]         = useState(false)
   const [applyModalOpen, setApplyModalOpen] = useState(false)
-  const [helpModalOpen, setHelpModalOpen]   = useState(false)
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false)
   const [toast, setToast]                   = useState(null)
   const [dislikedIds, setDislikedIds]       = useState(new Set())
-  const [fadingIds, setFadingIds]           = useState(new Set())  // jobs mid-fade-out
+  const [fadingIds, setFadingIds]           = useState(new Set())
   const undoTimerRef                        = useRef(null)
-  const [searchQuery, setSearchQuery] = useState({ keyword: '', location: '' })
-  const [keywordInput, setKeywordInput] = useState('')
-  const [locationInput, setLocationInput] = useState('')
-  const [searchFocused, setSearchFocused] = useState(false)
+  const [searchQuery, setSearchQuery]       = useState({ keyword: '', location: '' })
+  const [keywordInput, setKeywordInput]     = useState('')
+  const [locationInput, setLocationInput]   = useState('')
+  const [searchFocused, setSearchFocused]   = useState(false)
   const [recommendedJobs, setRecommendedJobs] = useState([])
   const matchCache = useRef({})
+
+  // Mobile-only: "AI Matches" pill toggle
+  const [showAIMatches, setShowAIMatches] = useState(false)
+  // Mobile-only: overflow filter bottom sheet
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Load jobs
+  // ── Load jobs ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoading(true)
@@ -86,45 +106,27 @@ export default function ApplicantDashboard() {
         setFilteredJobs(jobsData)
         setSavedIds(new Set(savedData))
         setAppliedIds(new Set(appsData.map(a => a.job?._id || a.job)))
-        // If ?job=ID is in the URL, auto-select that job (e.g. from Saved Jobs "Apply now")
         const targetJobId = searchParams.get('job')
         let targetJob = targetJobId ? jobsData.find(j => j._id === targetJobId) : null
-        
         if (targetJobId && !targetJob) {
-          try {
-            targetJob = await fetchJobById(targetJobId)
-          } catch (e) {
-            console.error('Failed to fetch target job', e)
-          }
+          try { targetJob = await fetchJobById(targetJobId) } catch (e) { console.error(e) }
         }
-        
-        setSelectedJob(prev => targetJob || prev || jobsData[0] || null)
-
-        if (targetJob) {
-          setApplyModalOpen(true)
-          setSearchParams({}, { replace: true })
-        }
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+        // On mobile, don't auto-select the first job — user must tap a card.
+        // On desktop, auto-select the first job so the right pane is populated.
+        setSelectedJob(prev => targetJob || (isMobile ? null : (prev || jobsData[0] || null)))
+        if (targetJob) { setApplyModalOpen(true); setSearchParams({}, { replace: true }) }
+      } catch (err) { console.error(err) }
+      finally { setLoading(false) }
     }
     load()
-    // Also load recommendations (separate, non-blocking)
-    getRecommendedJobs()
-      .then(data => setRecommendedJobs(data || []))
-      .catch(() => {})
+    getRecommendedJobs().then(data => setRecommendedJobs(data || [])).catch(() => {})
   }, [])
 
-  // AI match — fetch live score whenever a job is selected
+  // ── AI match for selected job ─────────────────────────────────────────────
   useEffect(() => {
     if (!selectedJob) return
     const id = selectedJob._id
-    if (matchCache.current[id]) {
-      setMatchData(prev => ({ ...prev, [id]: matchCache.current[id] }))
-      return
-    }
+    if (matchCache.current[id]) { setMatchData(prev => ({ ...prev, [id]: matchCache.current[id] })); return }
     setMatchLoading(true)
     getAIMatch(id)
       .then(data => { matchCache.current[id] = data; setMatchData(prev => ({ ...prev, [id]: data })) })
@@ -132,38 +134,43 @@ export default function ApplicantDashboard() {
       .finally(() => setMatchLoading(false))
   }, [selectedJob])
 
-  // Filter + search + recommendations
+  // ── Eager batch AI scores for all visible jobs (mobile cards) ─────────────
+  useEffect(() => {
+    if (filteredJobs.length === 0) return
+    filteredJobs.forEach(job => {
+      const id = job._id
+      if (matchCache.current[id]) {
+        setMatchData(prev => prev[id] ? prev : { ...prev, [id]: matchCache.current[id] })
+        return
+      }
+      getAIMatch(id).then(data => { matchCache.current[id] = data; setMatchData(prev => ({ ...prev, [id]: data })) }).catch(() => {})
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredJobs])
+
+  // ── Filter + search + recommendations ────────────────────────────────────
   useEffect(() => {
     let result = [...jobs]
     const { keyword, location } = searchQuery
     const hasSearch = keyword || location
-
-    // Hide disliked jobs
     result = result.filter(j => !dislikedIds.has(j._id))
-
     if (keyword) result = result.filter(j =>
       j.title.toLowerCase().includes(keyword.toLowerCase()) ||
       j.company.toLowerCase().includes(keyword.toLowerCase()) ||
       (j.description || '').toLowerCase().includes(keyword.toLowerCase())
     )
-    if (location) result = result.filter(j =>
-      j.location.toLowerCase().includes(location.toLowerCase())
-    )
+    if (location) result = result.filter(j => j.location.toLowerCase().includes(location.toLowerCase()))
     if (filters.jobType.length > 0) result = result.filter(j => j.jobType?.some(t => filters.jobType.includes(t)))
     if (filters.workMode) result = result.filter(j => j.workMode === filters.workMode)
     if (filters.experienceLevel) result = result.filter(j => j.experienceLevel === filters.experienceLevel)
     if (filters.salaryMax < 500000) result = result.filter(j => !j.salaryMin || j.salaryMin <= filters.salaryMax)
     if (sort === 'date') result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-
-    // When no search active, put recommended jobs first (deduplicated)
-    // Only reorder — never re-introduce jobs that were already filtered out
     if (!hasSearch && recommendedJobs.length > 0) {
       const recIds = new Set(recommendedJobs.map(j => j._id || j.job_id))
       const recommended = result.filter(j => recIds.has(j._id))
       const rest = result.filter(j => !recIds.has(j._id))
       result = [...recommended, ...rest]
     }
-
     setFilteredJobs(result)
   }, [jobs, filters, sort, searchQuery, recommendedJobs, dislikedIds])
 
@@ -171,41 +178,22 @@ export default function ApplicantDashboard() {
     e.preventDefault()
     const kw = keywordInput.trim()
     const loc = locationInput.trim()
-
-    // If both fields cleared, reset to full job list
-    if (!kw && !loc) {
-      setSearchQuery({ keyword: '', location: '' })
-      return
-    }
-
-    // Call backend search API for keyword searches (MongoDB text search)
-    // Location-only also hits the API for server-side filtering
+    if (!kw && !loc) { setSearchQuery({ keyword: '', location: '' }); return }
     setSearchLoading(true)
     try {
       const results = await searchJobs({ title: kw, location: loc })
-      setJobs(results)
-      setFilteredJobs(results)
+      setJobs(results); setFilteredJobs(results)
       setSearchQuery({ keyword: kw, location: loc })
       if (results.length > 0) setSelectedJob(results[0])
-    } catch (err) {
-      console.error('[search]', err)
-      showToast('Search failed. Please try again.', 'error')
-    } finally {
-      setSearchLoading(false)
-    }
+    } catch (err) { console.error('[search]', err); showToast('Search failed. Please try again.', 'error') }
+    finally { setSearchLoading(false) }
   }
 
   const handleSave = async (job) => {
-    const id = job._id
-    const wasSaved = savedIds.has(id)
+    const id = job._id; const wasSaved = savedIds.has(id)
     setSavedIds(prev => { const s = new Set(prev); wasSaved ? s.delete(id) : s.add(id); return s })
-    try {
-      wasSaved ? await unsaveJob(id) : await saveJob(id)
-      showToast(wasSaved ? 'Job removed from saved' : 'Job saved!')
-    } catch {
-      setSavedIds(prev => { const s = new Set(prev); wasSaved ? s.add(id) : s.delete(id); return s })
-      showToast('Failed to update saved jobs', 'error')
-    }
+    try { wasSaved ? await unsaveJob(id) : await saveJob(id); showToast(wasSaved ? 'Job removed from saved' : 'Job saved!') }
+    catch { setSavedIds(prev => { const s = new Set(prev); wasSaved ? s.add(id) : s.delete(id); return s }); showToast('Failed to update saved jobs', 'error') }
   }
 
   const handleApplySuccess = () => {
@@ -214,60 +202,403 @@ export default function ApplicantDashboard() {
     showToast('Application submitted! ✓')
   }
 
-  // ── Dislike / hide job ────────────────────────────────────────────────────
   const handleDislike = async (job) => {
-    const id = job._id
-    const wasDisliked = dislikedIds.has(id)
-
+    const id = job._id; const wasDisliked = dislikedIds.has(id)
     if (wasDisliked) {
-      // Undo — restore immediately
       setDislikedIds(prev => { const s = new Set(prev); s.delete(id); return s })
       setFadingIds(prev => { const s = new Set(prev); s.delete(id); return s })
       try { await undislikeJob(id) } catch { /* silent */ }
-      showToast('Job restored to your feed')
-      return
+      showToast('Job restored to your feed'); return
     }
-
-    // Start fade-out animation
     setFadingIds(prev => new Set([...prev, id]))
-
-    // After animation completes, mark as disliked and deselect if needed
     setTimeout(() => {
       setDislikedIds(prev => new Set([...prev, id]))
       setFadingIds(prev => { const s = new Set(prev); s.delete(id); return s })
       if (selectedJob?._id === id) setSelectedJob(null)
     }, 350)
-
-    // Persist to server
-    try { await dislikeJob(id) } catch { /* silent — UI already updated */ }
-
-    // Show undo toast for 5 seconds
+    try { await dislikeJob(id) } catch { /* silent */ }
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
     setToast({
-      msg: 'Job hidden',
-      type: 'undo',
+      msg: 'Job hidden', type: 'undo',
       onUndo: () => {
         if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
         setDislikedIds(prev => { const s = new Set(prev); s.delete(id); return s })
         setFadingIds(prev => { const s = new Set(prev); s.delete(id); return s })
-        undislikeJob(id).catch(() => {})
-        setToast(null)
+        undislikeJob(id).catch(() => {}); setToast(null)
       },
     })
     undoTimerRef.current = setTimeout(() => setToast(null), 5000)
   }
 
-  // Load disliked IDs on mount
   useEffect(() => {
     getDislikedJobIds().then(ids => setDislikedIds(new Set(ids))).catch(() => {})
     return () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current) }
   }, [])
 
   const activeFiltersCount = [
-    filters.jobType.length > 0, !!filters.workMode,
-    !!filters.experienceLevel, filters.salaryMax < 500000,
+    filters.jobType.length > 0, !!filters.workMode, !!filters.experienceLevel, filters.salaryMax < 500000,
   ].filter(Boolean).length
 
+  // ── Mobile pill handlers (reuse existing filter state) ───────────────────
+  const handleAIMatchesPill = () => {
+    const next = !showAIMatches
+    setShowAIMatches(next)
+    if (next) setFilters({ jobType: [], experienceLevel: '', workMode: '', salaryMin: 0, salaryMax: 500000 })
+  }
+  const handleWorkModePill = (value) => {
+    setShowAIMatches(false)
+    setFilters(f => ({ ...f, workMode: f.workMode === value ? '' : value }))
+  }
+  const handleJobTypePill = (value) => {
+    setShowAIMatches(false)
+    setFilters(f => {
+      const already = f.jobType.includes(value)
+      return { ...f, jobType: already ? f.jobType.filter(t => t !== value) : [...f.jobType, value] }
+    })
+  }
+
+  // ── Shared job list renderer ──────────────────────────────────────────────
+  const renderJobList = (containerStyle) => (
+    <div style={containerStyle}>
+      {loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} style={{ backgroundColor: 'var(--cc-surface)', border: '1px solid var(--cc-border)', borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
+            {[{ w: '70%', h: '15px' }, { w: '48%', h: '12px' }, { w: '38%', h: '12px' }].map((b, j) => (
+              <div key={j} style={{ height: b.h, width: b.w, backgroundColor: 'var(--cc-border)', borderRadius: '4px', marginBottom: '8px', animation: 'pulse 1.4s ease-in-out infinite' }} />
+            ))}
+          </div>
+        ))
+      ) : filteredJobs.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center' }}>
+          <NoJobsSVG />
+          <p style={{ fontWeight: '600', color: 'var(--cc-text-1)', margin: '16px 0 4px', fontSize: '15px' }}>No jobs found</p>
+          <p style={{ fontSize: '13px', color: 'var(--cc-text-3)', margin: 0 }}>Try adjusting your filters or search terms</p>
+        </div>
+      ) : (
+        filteredJobs.map(job => (
+          <div key={job._id} style={{
+            opacity: fadingIds.has(job._id) ? 0 : 1,
+            transform: fadingIds.has(job._id) ? 'translateX(-12px) scale(0.97)' : 'none',
+            transition: 'opacity 0.35s ease, transform 0.35s ease',
+            pointerEvents: fadingIds.has(job._id) ? 'none' : 'auto',
+          }}>
+            <JobCard
+              job={job}
+              selected={selectedJob?._id === job._id}
+              saved={savedIds.has(job._id)}
+              matchScore={matchData[job._id]?.matchScore}
+              matchData={matchData[job._id] || null}
+              onSelect={() => { setSelectedJob(job) }}
+              onSave={() => handleSave(job)}
+              onDislike={() => handleDislike(job)}
+              disliked={dislikedIds.has(job._id)}
+              isMobile={isMobile}
+              applied={appliedIds.has(job._id)}
+              onApply={e => { e.stopPropagation(); setSelectedJob(job); setApplyModalOpen(true) }}
+            />
+          </div>
+        ))
+      )}
+    </div>
+  )
+
+  // ── MOBILE LAYOUT ────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--cc-bg)', fontFamily: '"Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif', position: 'relative' }}>
+        <style>{`
+          @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+          .adb-filter-pills::-webkit-scrollbar { display: none; }
+          .adb-filter-pills { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
+
+        {/* ── Mobile: Full-screen job details overlay ── */}
+        {selectedJob && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            backgroundColor: 'var(--cc-surface)',
+            display: 'flex', flexDirection: 'column',
+            overflowY: 'auto',
+          }}>
+            {/* Header bar: back arrow left + close ✕ right */}
+            <div style={{
+              position: 'sticky', top: 0, zIndex: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '0 16px',
+              height: '52px',
+              backgroundColor: 'var(--cc-surface)',
+              borderBottom: '1px solid var(--cc-border)',
+              boxShadow: 'var(--cc-shadow)',
+              flexShrink: 0,
+            }}>
+              {/* Left: back arrow + label */}
+              <button
+                onClick={() => setSelectedJob(null)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--cc-blue)', fontSize: '15px', fontWeight: '600',
+                  fontFamily: 'inherit', padding: '4px 0',
+                }}
+              >
+                <ArrowLeft size={20} />
+                Jobs
+              </button>
+
+              {/* Right: ✕ close button */}
+              <button
+                onClick={() => setSelectedJob(null)}
+                aria-label="Close job details"
+                style={{
+                  width: '36px', height: '36px', borderRadius: '50%',
+                  border: '1px solid var(--cc-border)',
+                  backgroundColor: 'var(--cc-surface-2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontSize: '18px', lineHeight: 1,
+                  color: 'var(--cc-text-2)',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Job details content */}
+            <div style={{ flex: 1, paddingBottom: '72px' }}>
+              <JobDetails
+                job={selectedJob}
+                matchData={matchData[selectedJob._id] || null}
+                matchLoading={matchLoading}
+                saved={savedIds.has(selectedJob._id)}
+                applied={appliedIds.has(selectedJob._id)}
+                disliked={dislikedIds.has(selectedJob._id)}
+                onApply={() => setApplyModalOpen(true)}
+                onSave={() => handleSave(selectedJob)}
+                onDislike={() => handleDislike(selectedJob)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Mobile: Main list view ── */}
+        {/* Use the shared Navbar so the hamburger/sidebar drawer is available on mobile */}
+        <Navbar />
+
+        {/* Spacer to clear the fixed Navbar (60px tall) */}
+        <div style={{ height: '60px' }} />
+
+        {/* Search bar */}
+        <div style={{ padding: '12px 16px 0' }}>
+          <form onSubmit={handleSearch}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              backgroundColor: 'var(--cc-surface)',
+              border: '1px solid var(--cc-border)',
+              borderRadius: '10px',
+              padding: '0 12px',
+              height: '44px',
+              boxShadow: 'var(--cc-shadow)',
+            }}>
+              <Search size={16} style={{ color: 'var(--cc-text-3)', flexShrink: 0 }} />
+              <input
+                value={keywordInput}
+                onChange={e => setKeywordInput(e.target.value)}
+                placeholder="Job title, keywords, or company"
+                style={{
+                  flex: 1, border: 'none', outline: 'none',
+                  fontSize: '14px', color: 'var(--cc-text-1)',
+                  backgroundColor: 'transparent', fontFamily: 'inherit',
+                }}
+              />
+              {keywordInput && (
+                <button type="submit" style={{
+                  flexShrink: 0, height: '30px', padding: '0 12px',
+                  backgroundColor: 'var(--cc-blue)', color: 'white',
+                  border: 'none', borderRadius: '6px',
+                  fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}>
+                  {searchLoading ? '…' : 'Go'}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Filter pills — 2-row wrap layout, overflow in bottom sheet */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: '8px',
+          padding: '10px 16px',
+          // Reserve space for the funnel button on the right by using a relative container
+          position: 'relative',
+          paddingRight: '52px', // leave room for the fixed funnel button
+        }}>
+          {/* AI Matches pill — always first */}
+          <button
+            onClick={handleAIMatchesPill}
+            style={{
+              flexShrink: 0,
+              height: '32px', padding: '0 14px',
+              borderRadius: '16px',
+              border: `1px solid ${showAIMatches ? 'var(--cc-blue)' : 'var(--cc-border)'}`,
+              backgroundColor: showAIMatches ? 'var(--cc-blue)' : 'var(--cc-surface)',
+              color: showAIMatches ? 'white' : 'var(--cc-text-2)',
+              fontSize: '13px', fontWeight: '600',
+              cursor: 'pointer', fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ✦ AI Matches
+          </button>
+
+          {/* Work mode pills — all 3 inline */}
+          {WORK_MODE_PILLS.map(pill => {
+            const active = filters.workMode === pill.value
+            return (
+              <button key={pill.value} onClick={() => handleWorkModePill(pill.value)} style={{
+                flexShrink: 0, height: '32px', padding: '0 14px', borderRadius: '16px',
+                border: `1px solid ${active ? 'var(--cc-blue)' : 'var(--cc-border)'}`,
+                backgroundColor: active ? 'var(--cc-blue-light)' : 'var(--cc-surface)',
+                color: active ? 'var(--cc-blue)' : 'var(--cc-text-2)',
+                fontSize: '13px', fontWeight: active ? '600' : '400',
+                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+              }}>
+                {pill.label}
+              </button>
+            )
+          })}
+
+          {/* Full-time pill inline — fits on row 2 */}
+          {(() => {
+            const pill = JOB_TYPE_PILLS[0] // full-time
+            const active = filters.jobType.includes(pill.value)
+            return (
+              <button key={pill.value} onClick={() => handleJobTypePill(pill.value)} style={{
+                flexShrink: 0, height: '32px', padding: '0 14px', borderRadius: '16px',
+                border: `1px solid ${active ? 'var(--cc-blue)' : 'var(--cc-border)'}`,
+                backgroundColor: active ? 'var(--cc-blue-light)' : 'var(--cc-surface)',
+                color: active ? 'var(--cc-blue)' : 'var(--cc-text-2)',
+                fontSize: '13px', fontWeight: active ? '600' : '400',
+                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+              }}>
+                {pill.label}
+              </button>
+            )
+          })()}
+
+          {/* Funnel icon button — opens the existing FilterModal sidebar */}
+          <button
+            onClick={() => setFilterOpen(true)}
+            aria-label="More filters"
+            style={{
+              position: 'absolute', right: '16px', top: '10px',
+              width: '36px', height: '32px', borderRadius: '16px',
+              border: `1px solid ${activeFiltersCount > 0 ? 'var(--cc-blue)' : 'var(--cc-border)'}`,
+              backgroundColor: activeFiltersCount > 0 ? 'var(--cc-blue-light)' : 'var(--cc-surface)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <SlidersHorizontal
+              size={14}
+              color={activeFiltersCount > 0 ? 'var(--cc-blue)' : 'var(--cc-text-2)'}
+            />
+          </button>
+        </div>
+
+        {/* Job count */}
+        {!loading && (
+          <div style={{ padding: '0 16px 8px', fontSize: '12px', color: 'var(--cc-text-3)' }}>
+            {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found
+          </div>
+        )}
+
+        {/* Job list — padded bottom so content clears the nav bar */}
+        {renderJobList({ padding: '0 16px', paddingBottom: '80px' })}
+
+        {/* Bottom nav */}
+        <MobileNavBar variant="applicant" />
+
+        {/* Modals */}
+        {filterOpen && <FilterModal filters={filters} onApply={setFilters} onClose={() => setFilterOpen(false)} />}
+        {applyModalOpen && selectedJob && (
+          <ApplyModal
+            job={selectedJob}
+            matchData={matchData[selectedJob._id] || null}
+            onClose={() => setApplyModalOpen(false)}
+            onSuccess={handleApplySuccess}
+            onNoResume={() => { showToast('Build your CareerConnect resume first', 'error'); navigate('/profile?tab=resume') }}
+          />
+        )}
+
+        {/* Toast */}
+        {toast && (
+          <div style={{
+            position: 'fixed', bottom: '76px', left: '50%', transform: 'translateX(-50%)',
+            padding: '10px 18px', borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+            fontSize: '13px', fontWeight: '500', zIndex: 60,
+            backgroundColor: toast.type === 'error' ? 'var(--cc-red)' : 'var(--cc-text-1)',
+            color: 'white', whiteSpace: 'nowrap',
+            display: 'flex', alignItems: 'center', gap: '12px',
+          }}>
+            <span>{toast.msg}</span>
+            {toast.onUndo && (
+              <button onClick={toast.onUndo} style={{
+                background: 'none', border: '1px solid rgba(255,255,255,0.5)',
+                color: 'white', borderRadius: '4px', padding: '2px 8px',
+                fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Undo</button>
+            )}
+          </div>
+        )}
+
+        {/* Help chatbot FAB — sits above the bottom nav bar */}
+        <button
+          onClick={() => setChatDrawerOpen(v => !v)}
+          title="Help & FAQ"
+          aria-label="Open help chat"
+          style={{
+            position: 'fixed', bottom: '76px', right: '16px', zIndex: 55,
+            width: '48px', height: '48px', borderRadius: '50%',
+            backgroundColor: chatDrawerOpen ? 'var(--cc-blue-hover)' : 'var(--cc-blue)',
+            border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(37,87,167,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white',
+          }}
+        >
+          <HelpCircle size={22} />
+        </button>
+
+        {/* Chat drawer backdrop */}
+        {chatDrawerOpen && (
+          <div
+            onClick={() => setChatDrawerOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 56,
+              backgroundColor: 'var(--cc-overlay)',
+            }}
+          />
+        )}
+
+        {/* Chat drawer — slides up from bottom on mobile */}
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 57,
+          height: '75vh',
+          borderRadius: '16px 16px 0 0',
+          boxShadow: '0 -4px 32px rgba(0,0,0,0.18)',
+          overflow: 'hidden',
+          transform: chatDrawerOpen ? 'translateY(0)' : 'translateY(110%)',
+          transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)',
+          pointerEvents: chatDrawerOpen ? 'auto' : 'none',
+        }}>
+          <HelpChatbot mode="drawer" onClose={() => setChatDrawerOpen(false)} />
+        </div>
+      </div>
+    )
+  }
+
+  // ── DESKTOP LAYOUT (unchanged) ────────────────────────────────────────────
   return (
     <div className="adb-root" style={{
       minHeight: '100vh',
@@ -365,7 +696,6 @@ export default function ApplicantDashboard() {
 
           {/* Left — job list */}
           <div className="adb-left" style={{ width:'40%', minWidth:'300px', flexShrink:0, display:'flex', flexDirection:'column' }}>
-            {/* Toolbar */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
               <div>
                 <h1 style={{ fontSize:'20px', fontWeight:'700', color:'var(--cc-text-1)', margin:'0 0 2px', lineHeight:1.2 }}>Jobs for you</h1>
@@ -396,44 +726,7 @@ export default function ApplicantDashboard() {
               </div>
             </div>
 
-            {/* Job list */}
-            <div className="adb-joblist" style={{ height:'calc(100vh - 260px)', overflowY:'auto', paddingRight:'4px' }}>
-              {loading ? (
-                Array.from({length:5}).map((_,i)=>(
-                  <div key={i} style={{ backgroundColor:'var(--cc-surface)', border:'1px solid var(--cc-border)', borderRadius:'8px', padding:'16px', marginBottom:'12px' }}>
-                    {[{w:'70%',h:'15px'},{w:'48%',h:'12px'},{w:'38%',h:'12px'}].map((b,j)=>(
-                      <div key={j} style={{ height:b.h, width:b.w, backgroundColor:'var(--cc-border)', borderRadius:'4px', marginBottom:'8px', animation:'pulse 1.4s ease-in-out infinite' }}/>
-                    ))}
-                  </div>
-                ))
-              ) : filteredJobs.length === 0 ? (
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', textAlign:'center', padding:'40px 20px' }}>
-                  <NoJobsSVG/>
-                  <p style={{ fontWeight:'600', color:'var(--cc-text-1)', margin:'16px 0 4px', fontSize:'15px' }}>No jobs found</p>
-                  <p style={{ fontSize:'13px', color:'var(--cc-text-3)', margin:0 }}>Try adjusting your filters or search terms</p>
-                </div>
-              ) : (
-                filteredJobs.map(job=>(
-                  <div key={job._id} style={{
-                    opacity: fadingIds.has(job._id) ? 0 : 1,
-                    transform: fadingIds.has(job._id) ? 'translateX(-12px) scale(0.97)' : 'none',
-                    transition: 'opacity 0.35s ease, transform 0.35s ease',
-                    pointerEvents: fadingIds.has(job._id) ? 'none' : 'auto',
-                  }}>
-                    <JobCard
-                      job={job}
-                      selected={selectedJob?._id === job._id}
-                      saved={savedIds.has(job._id)}
-                      matchScore={matchData[job._id]?.matchScore}
-                      onSelect={()=>setSelectedJob(job)}
-                      onSave={()=>handleSave(job)}
-                      onDislike={()=>handleDislike(job)}
-                      disliked={dislikedIds.has(job._id)}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
+            {renderJobList({ height: 'calc(100vh - 260px)', overflowY: 'auto', paddingRight: '4px' })}
           </div>
 
           {/* Right — job details */}
@@ -476,7 +769,7 @@ export default function ApplicantDashboard() {
           matchData={matchData[selectedJob._id] || null}
           onClose={()=>setApplyModalOpen(false)}
           onSuccess={handleApplySuccess}
-          onNoResume={()=>{ showToast('Build your CareerCONNECT resume first', 'error'); navigate('/profile?tab=resume') }}
+          onNoResume={()=>{ showToast('Build your CareerConnect resume first', 'error'); navigate('/profile?tab=resume') }}
         />
       )}
 
