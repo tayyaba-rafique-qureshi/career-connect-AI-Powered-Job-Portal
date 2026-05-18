@@ -15,6 +15,7 @@ No business logic lives here.  No database calls live in services/.
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel as _BaseModel
 from pymongo.database import Database
 
 from models.schemas import (
@@ -39,6 +40,12 @@ from services.recommendation_engine import get_recommendations
 from services.graph_builder import build_job_graph as _build_graph, get_starting_nodes
 from services.astar_search import run_astar
 from services.career_advisor import get_career_recommendations
+from services.skill_extractor import (
+    extract_skills_from_text,
+    normalize_skills_list,
+    calculate_skill_match,
+    get_combined_applicant_skills,
+)
 from utils.text_utils import get_skill_overlap
 
 router = APIRouter()
@@ -55,7 +62,6 @@ def _stringify_ids(obj):
     if isinstance(obj, ObjectId):
         return str(obj)
     return obj
-
 
 
 # ── Dependency helper ─────────────────────────────────────────────────────────
@@ -136,20 +142,14 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
       5. Compute skill overlap (matched / missing).
       6. Return MatchResponse.
 
-    Returns 400 if the applicant has no resume text.
+    Gracefully handles applicants with no resume text — the matching engine
+    falls back to skill-list comparison when resume text is absent.
     """
     print(f"[/match] applicant_id={payload.applicant_id}  job_id={payload.job_id}")
 
     applicant = _get_applicant(db, payload.applicant_id)
     job       = _get_job(db, payload.job_id)
 
-    # ── Resume text — required for a meaningful score ─────────────────────────
-    resume_text: str = (
-        applicant.get("applicantProfile", {})
-        .get("resume", {})
-        .get("rawText", "")
-        or ""
-    )
     # ── Delegate all scoring to the matching engine ───────────────────────────
     result = calculate_match_score(applicant_data=applicant, job_data=job)
 
@@ -192,6 +192,11 @@ async def match(payload: MatchRequest, db: Database = Depends(get_db)):
         "experienceMatch":   result["experienceMatch"],
         "applicantFeedback": applicant_feedback,
         "recruiterFeedback": recruiter_feedback,
+        # Convenience flat list for callers that only need skill names
+        "skillsMatchedNames": [
+            s["skill"] if isinstance(s, dict) else s
+            for s in result["skillsMatched"]
+        ],
     }
 
 
@@ -531,6 +536,12 @@ async def career_advice(
     current_skills: list[str] = get_combined_applicant_skills(applicant)
     missing_skills: list[str] = match_result["skillsMissing"]
 
+    # skillsMatched is now list[dict] — extract names for career advice
+    skills_matched_names: list[str] = [
+        s["skill"] if isinstance(s, dict) else s
+        for s in match_result["skillsMatched"]
+    ]
+
     # ── Generate career advice ────────────────────────────────────────────────
     advice = get_career_recommendations(
         missing_skills=missing_skills,
@@ -550,6 +561,7 @@ async def career_advice(
         "jobTitle":          job.get("title", ""),
         "currentMatchScore": match_result["finalScore"],
         "skillsMatched":     match_result["skillsMatched"],
+        "skillsMatchedNames": skills_matched_names,
         "skillsMissing":     missing_skills,
         "careerAdvice":      advice,
     }
@@ -558,7 +570,6 @@ async def career_advice(
 # ── POST /debug-skills ────────────────────────────────────────────────────────
 # DEBUG ENDPOINT — remove before production
 
-from pydantic import BaseModel as _BaseModel
 from services.skill_extractor import (
     extract_skills_from_text,
     normalize_skills_list,

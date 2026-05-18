@@ -7,6 +7,8 @@
 server/.env
 client/.env
 
+.kiro/
+
 # ─── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
 client/node_modules/

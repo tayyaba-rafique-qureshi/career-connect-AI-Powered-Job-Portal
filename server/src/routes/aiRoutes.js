@@ -16,11 +16,6 @@ router.post('/match-resume-job', protect, async (req, res) => {
     res.json(result)
   } catch (err) {
     console.error('[AI Match]', err.message)
-    // Surface missing-resume signal to the client so new users see a prompt
-    const detail = err.response?.data?.detail || ''
-    if (err.response?.status === 400 && detail.toLowerCase().includes('no resume text')) {
-      return res.json({ matchScore: null, skillsMatched: [], skillsMissing: [], noResumeText: true })
-    }
     res.json({ matchScore: null, skillsMatched: [], skillsMissing: [] })
   }
 })

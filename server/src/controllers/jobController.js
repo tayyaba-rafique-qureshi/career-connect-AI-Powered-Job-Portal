@@ -253,7 +253,7 @@ exports.updateJobStatus = async (req, res) => {
   }
 }
 
-// GET /api/jobs/:id/applicants — get all applicants for a job with mock AI scores
+// GET /api/jobs/:id/applicants — get all applicants for a job, enriched with live AI match scores
 exports.getJobApplicants = async (req, res) => {
   try {
     const job = await Job.findOne({ _id: req.params.id, postedBy: req.user.id })
@@ -275,63 +275,42 @@ exports.getJobApplicants = async (req, res) => {
 
     const jobSkills = job.requiredSkills || job.skills || []
 
-    // Enrich each application with an AI match score.
-    // Strategy:
-    //   1. If aiScore was set within the last 24 hours, use the cached value.
-    //   2. Otherwise call the AI service (non-blocking per applicant).
-    //   3. If AI returns null/errors, fall back to the deterministic mock.
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
-
+    // Build enriched applicant list with real AI match scores.
+    // Strategy: prefer the score saved on the Application at apply-time;
+    // if missing (legacy data), call the AI service live; if AI is
+    // unreachable, fall back to a local skill-overlap ratio so the
+    // recruiter still sees a useful number.
     const enriched = await Promise.all(applications.map(async (app) => {
-      // ── Skill overlap (always computed locally — fast) ────────────────────
       const applicantSkills = (app.applicant.applicantProfile?.skills || [])
         .map(s => (typeof s === 'string' ? s : s.name).toLowerCase())
       const matched = jobSkills.filter(s => applicantSkills.includes(s.toLowerCase()))
       const missing = jobSkills.filter(s => !applicantSkills.includes(s.toLowerCase()))
 
-      // ── Score resolution ──────────────────────────────────────────────────
       let matchScore = null
-
-      // 1. Use cached aiScore if it was set within 24 hours
-      const scoreAge = app.updatedAt ? Date.now() - new Date(app.updatedAt).getTime() : Infinity
-      if (app.aiScore !== null && app.aiScore !== undefined && scoreAge < TWENTY_FOUR_HOURS) {
-        matchScore = app.aiScore
+      if (app.aiScore != null) {
+        // Stored score is 0-1 → convert to 0-100 percentage
+        matchScore = Math.round(app.aiScore * 100)
       } else {
-        // 2. Call AI service
-        try {
-          const aiResult = await aiService.analyzeMatch(
-            app.applicant._id.toString(),
-            job._id.toString()
-          )
-          if (aiResult.matchScore !== null && aiResult.matchScore !== undefined) {
-            matchScore = aiResult.matchScore
-
-            // Persist the fresh score so the next load within 24h uses the cache
-            await Application.findByIdAndUpdate(app._id, {
-              aiScore:       matchScore,
-              skillsMatched: aiResult.skillsMatched,
-              skillsMissing: aiResult.skillsMissing,
-            })
-          }
-        } catch {
-          // AI call failed — fall through to mock
+        const live = await aiService.matchApplicantToJob(
+          app.applicant._id.toString(),
+          job._id.toString()
+        )
+        if (live.matchScore != null) {
+          matchScore = Math.round(live.matchScore)
+        } else if (jobSkills.length > 0) {
+          matchScore = Math.round((matched.length / jobSkills.length) * 100)
+        } else {
+          matchScore = 0
         }
-      }
-
-      // 3. Mock fallback: deterministic score seeded by applicant ID
-      if (matchScore === null || matchScore === undefined) {
-        const idSum = app.applicant._id.toString()
-          .split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-        matchScore = 60 + (idSum % 40) // 60–99
       }
 
       return {
         ...app.toObject(),
         matchScore,
         skillsMatched: matched.length,
-        totalSkills:   jobSkills.length,
+        totalSkills: jobSkills.length,
         matchedSkills: matched,
-        missingSkills: missing,
+        missingSkills: missing
       }
     }))
 

@@ -313,6 +313,44 @@ export default function MyJobs() {
           .myjobs-container { padding: 60px 16px 0 !important; }
           .myjobs-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .myjobs-tabbtn { padding: 14px 16px !important; }
+
+          /* ── Saved tab: stack actions below info on mobile ── */
+          .saved-job-row {
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+            align-items: flex-start !important;
+          }
+          .saved-job-row .saved-job-actions {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+            justify-content: flex-start !important;
+            padding-left: 64px !important; /* align with text (48px logo + 16px gap) */
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+          }
+
+          /* ── Applied/Archived tab: stack status row below info ── */
+          /* The outer row wraps so the right column drops below the info column */
+          .app-row-inner {
+            flex-wrap: wrap !important;
+            align-items: flex-start !important;
+          }
+          /* The info column must never shrink to zero — give it full width on wrap */
+          .app-row-inner .flex-1 {
+            min-width: 0 !important;
+            /* On wrap, the info column takes the remaining width after the logo */
+            flex-basis: calc(100% - 64px) !important;
+          }
+          /* The right column drops to its own row, left-aligned under the info */
+          .app-row-right {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+            gap: 6px !important;
+            padding-left: 64px !important; /* align with text (48px logo + 16px gap) */
+          }
         }
       `}</style>
     </div>
@@ -326,6 +364,7 @@ function SavedJobRow({ job, savedAt, isApplied }) {
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      className="saved-job-row"
       style={{
         display: 'flex', alignItems: 'center', gap: '16px',
         padding: '20px 24px',
@@ -360,7 +399,7 @@ function SavedJobRow({ job, savedAt, isApplied }) {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+      <div className="saved-job-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         {isApplied ? (
           <>
             <span style={{

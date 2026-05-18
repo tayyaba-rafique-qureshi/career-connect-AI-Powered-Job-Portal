@@ -149,14 +149,15 @@ export default function EmployerLayout({ children }) {
       {/* Main content */}
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
         {/* Mobile topbar */}
-        <header className="md:hidden bg-white dark:bg-[#1f1f1f] border-b border-gray-200 dark:border-gray-700 px-4 h-14 flex items-center justify-between sticky top-0 z-20">
-          <button onClick={() => setSidebarOpen(true)} className="text-[#1A1A2E] dark:text-white">
+        <header className="md:hidden bg-white dark:bg-[#1f1f1f] border-b border-gray-200 dark:border-gray-700 px-4 h-14 flex items-center gap-3 sticky top-0 z-20">
+          <button onClick={() => setSidebarOpen(true)} className="text-[#1A1A2E] dark:text-white flex-shrink-0">
             <Menu size={22} />
           </button>
-          <Link to="/" className="text-lg font-bold">
+          <Link to="/" className="text-lg font-bold flex-shrink-0">
             <span className="text-[#1A1A2E] dark:text-white">Career</span>
             <span className="text-[#2557A7]">Connect</span>
           </Link>
+          <div className="flex-1" />
           <div className="flex items-center gap-2">
             {/* Dark mode toggle */}
             <button
