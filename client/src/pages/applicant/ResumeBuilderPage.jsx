@@ -750,7 +750,12 @@ export default function ResumeBuilderPage() {
 
     const result = validateResume()
     setValidation(result)
-    if (hasValidationErrors(result)) {
+
+    // For autosave: only block on critical personal info errors (name/email).
+    // Incomplete work experience / education entries are allowed through so
+    // the user can save partial progress while filling in a new entry.
+    const criticalError = result.fields.fullName || result.fields.email
+    if (criticalError) {
       pendingPayload.current = null
       setAutoSaveStatus('error')
       return
