@@ -1,3 +1,7 @@
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=flat&logo=mongodb&logoColor=white)
 # CareerConnect — AI‑Powered Job Portal
 
 CareerConnect is a full‑stack job portal that combines a modern job-search experience with AI‑assisted matching. It supports **Applicants** and **Employers/Recruiters** end‑to‑end (onboarding → job browsing/posting → applications → interviews → messaging & notifications).
@@ -99,7 +103,6 @@ When teammates open PRs (e.g. AI service, admin module):
 
 ## CI/CD Pipeline
 
-![CI](https://github.com/tayyaba-rafique-qureshi/career-connect-AI-Powered-Job-Portal/actions/workflows/ci.yml/badge.svg)
 
 GitHub Actions runs automatically on every push to `main` and every PR.
 
